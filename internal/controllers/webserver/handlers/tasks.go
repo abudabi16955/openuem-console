@@ -137,7 +137,12 @@ func (h *Handler) EditTask(c echo.Context) error {
 		}
 	}
 
-	return RenderView(c, tasks_views.TasksIndex("| Tasks", tasks_views.EditTask(c, task.Edges.Profile.ID, task, commonInfo), commonInfo))
+	reports, err := h.Model.GetTaskExecutionReports(taskId)
+	if err != nil {
+		return RenderError(c, partials.ErrorMessage(fmt.Sprintf("%s : %v", i18n.T(c.Request().Context(), "tasks.edit.could_not_get"), err), true))
+	}
+
+	return RenderView(c, tasks_views.TasksIndex("| Tasks", tasks_views.EditTask(c, task.Edges.Profile.ID, task, reports, commonInfo), commonInfo))
 }
 
 func (h *Handler) CloneTask(c echo.Context) error {
@@ -235,39 +240,57 @@ func validateTaskForm(c echo.Context) (*models.TaskConfig, error) {
 		return nil, errors.New(i18n.T(c.Request().Context(), "tasks.wrong_agenttype"))
 	}
 
+	var cfg *models.TaskConfig
+	var err error
 	switch taskType {
 	case task.TypeAddLocalUser.String(), task.TypeRemoveLocalUser.String():
-		return validateWindowsLocalUser(c)
+		cfg, err = validateWindowsLocalUser(c)
 	case task.TypeAddRegistryKey.String(), task.TypeAddRegistryKeyValue.String(), task.TypeRemoveRegistryKey.String(),
 		task.TypeRemoveRegistryKeyValue.String(), task.TypeUpdateRegistryKeyDefaultValue.String():
-		return validateWindowsRegistry(c)
+		cfg, err = validateWindowsRegistry(c)
 	case task.TypeAddUnixLocalUser.String():
-		return validateAddUnixLocalUser(c)
+		cfg, err = validateAddUnixLocalUser(c)
 	case task.TypeRemoveUnixLocalUser.String():
-		return validateRemoveUnixLocalUser(c)
+		cfg, err = validateRemoveUnixLocalUser(c)
 	case task.TypeAddLocalGroup.String(), task.TypeRemoveLocalGroup.String(),
 		task.TypeAddUsersToLocalGroup.String(), task.TypeRemoveUsersFromLocalGroup.String():
-		return validateWindowsLocalGroup(c)
+		cfg, err = validateWindowsLocalGroup(c)
 	case task.TypeAddUnixLocalGroup.String(), task.TypeRemoveUnixLocalGroup.String():
-		return validateUnixLocalGroup(c)
+		cfg, err = validateUnixLocalGroup(c)
 	case task.TypeMsiInstall.String(), task.TypeMsiUninstall.String():
-		return validateMSI(c)
+		cfg, err = validateMSI(c)
 	case task.TypeWingetDelete.String(), task.TypeWingetInstall.String(), task.TypeWingetUpdate.String():
-		return validateWinGetPackage(c)
+		cfg, err = validateWinGetPackage(c)
 	case task.TypePowershellScript.String():
-		return validatePowerShellScript(c)
+		cfg, err = validatePowerShellScript(c)
 	case task.TypeUnixScript.String():
-		return validateUnixScript(c)
+		cfg, err = validateUnixScript(c)
 	case task.TypeFlatpakInstall.String(), task.TypeFlatpakUninstall.String():
-		return validateFlatpakPackage(c)
+		cfg, err = validateFlatpakPackage(c)
 	case task.TypeBrewFormulaInstall.String(), task.TypeBrewFormulaUninstall.String(), task.TypeBrewFormulaUpgrade.String(),
 		task.TypeBrewCaskInstall.String(), task.TypeBrewCaskUninstall.String(), task.TypeBrewCaskUpgrade.String():
-		return validateHomeBrew(c)
+		cfg, err = validateHomeBrew(c)
 	case task.TypeNetbirdInstall.String(), task.TypeNetbirdUninstall.String(), string(task.TypeNetbirdRegister):
-		return validateNetbird(c)
+		cfg, err = validateNetbird(c)
 	default:
 		return nil, errors.New(i18n.T(c.Request().Context(), "tasks.new.wrong_type"))
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	timeout := 0
+	if c.FormValue("task-timeout") != "" {
+		t, err := strconv.Atoi(c.FormValue("task-timeout"))
+		if err != nil || t < 0 {
+			return nil, errors.New(i18n.T(c.Request().Context(), "tasks.invalid_timeout"))
+		}
+		timeout = t
+	}
+	cfg.Timeout = timeout
+
+	return cfg, nil
 }
 
 func validateWindowsRegistry(c echo.Context) (*models.TaskConfig, error) {
