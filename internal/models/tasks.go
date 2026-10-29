@@ -11,6 +11,7 @@ import (
 	ent "github.com/open-uem/ent"
 	"github.com/open-uem/ent/profile"
 	"github.com/open-uem/ent/task"
+	"github.com/open-uem/ent/taskreport"
 	"github.com/open-uem/openuem-console/internal/views/partials"
 )
 
@@ -90,6 +91,7 @@ type TaskConfig struct {
 	NetbirdGroups                         string
 	NetbirdAllowExtraDNSLabels            bool
 	IgnoreErrors                          bool
+	Timeout                               int
 }
 
 func (m *Model) CountAllTasksForProfile(profileID int) (int, error) {
@@ -113,6 +115,7 @@ func (m *Model) AddTaskToProfile(c echo.Context, profileID int, cfg TaskConfig) 
 		SetAgentType(task.AgentType(cfg.AgentsType)).
 		SetProfileID(profileID).
 		SetIgnoreErrors(cfg.IgnoreErrors).
+		SetTimeout(cfg.Timeout).
 		SetOrder(order + 1)
 
 	switch cfg.TaskType {
@@ -258,7 +261,7 @@ func (m *Model) AddTaskToProfile(c echo.Context, profileID int, cfg TaskConfig) 
 			return errors.New("could not parse tenant ID as an int")
 		}
 
-		return m.Client.Task.Create().SetName(cfg.Description).SetTenant(id).SetNetbirdGroups(cfg.NetbirdGroups).SetNetbirdAllowExtraDNSLabels(cfg.NetbirdAllowExtraDNSLabels).SetType(task.Type(cfg.TaskType)).SetAgentType(task.AgentType(cfg.AgentsType)).SetProfileID(profileID).Exec(context.Background())
+		return m.Client.Task.Create().SetName(cfg.Description).SetTenant(id).SetNetbirdGroups(cfg.NetbirdGroups).SetNetbirdAllowExtraDNSLabels(cfg.NetbirdAllowExtraDNSLabels).SetType(task.Type(cfg.TaskType)).SetAgentType(task.AgentType(cfg.AgentsType)).SetProfileID(profileID).SetTimeout(cfg.Timeout).Exec(context.Background())
 	}
 	return errors.New(i18n.T(c.Request().Context(), "tasks.unexpected_task_type"))
 }
@@ -266,7 +269,7 @@ func (m *Model) AddTaskToProfile(c echo.Context, profileID int, cfg TaskConfig) 
 func (m *Model) UpdateProfileTask(c echo.Context, taskID int, cfg TaskConfig) error {
 
 	// common query
-	query := m.Client.Task.UpdateOneID(taskID).SetName(cfg.Description).SetIgnoreErrors(cfg.IgnoreErrors)
+	query := m.Client.Task.UpdateOneID(taskID).SetName(cfg.Description).SetIgnoreErrors(cfg.IgnoreErrors).SetTimeout(cfg.Timeout)
 
 	// Update version
 	query.AddVersion(1)
@@ -624,6 +627,7 @@ func CloneTask(query *ent.TaskCreate, t *ent.Task, taskName string, profileID in
 	}
 
 	query.SetType(t.Type)
+	query.SetTimeout(t.Timeout)
 	query.SetVersion(1)
 
 	query.SetOrder(order)
@@ -641,4 +645,14 @@ func (m *Model) GetTaskSensitiveInformation() ([]*ent.Task, error) {
 
 func (m *Model) UpdateLocalUserPassword(taskID int, password string) error {
 	return m.Client.Task.UpdateOneID(taskID).SetLocalUserPassword(password).Exec(context.Background())
+}
+
+func (m *Model) GetTaskExecutionReports(taskID int) ([]*ent.TaskReport, error) {
+	return m.Client.TaskReport.Query().
+		Where(taskreport.HasTaskWith(task.ID(taskID))).
+		WithProfileissue(func(q *ent.ProfileIssueQuery) {
+			q.WithAgents()
+		}).
+		Order(ent.Desc(taskreport.FieldStartedAt)).
+		All(context.Background())
 }

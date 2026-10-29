@@ -14,7 +14,7 @@ templ ProfilesIssues(c echo.Context, p partials.PaginationAndSort, issues []*ent
 	@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Profile Management"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/profiles")))}, {Title: profile.Name, Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/profiles/%d", profile.ID))))}, {Title: i18n.T(ctx, "profiles.issues.title")}}, commonInfo)
 	<main class="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
 		<div id="error" class="hidden"></div>
-		<div class="uk-width-1-2@m uk-card uk-card-default">
+		<div class="uk-width-2-3@m uk-card uk-card-default">
 			<div class="uk-card-header">
 				<div class="flex justify-between items-center">
 					<div class="flex flex-col my-4 mx-1">
@@ -60,17 +60,26 @@ templ ProfilesIssues(c echo.Context, p partials.PaginationAndSort, issues []*ent
 											}
 										} else {
 											if len(issue.Edges.Tasksreports) > 0 {
-												<div class="flex gap-2">
+												<div class="flex flex-wrap items-center gap-2">
+													if getRunningTasks(issue.Edges.Tasksreports) > 0 {
+														<span class="text-blue-600 font-medium">{ i18n.T(ctx, "profiles.issues.tasks_report_running_summary", getRunningTasks(issue.Edges.Tasksreports)) }</span>
+													}
 													if getSuccessfulTasks(issue.Edges.Tasksreports) > 0 {
-														<span>{ i18n.T(ctx, "profiles.issues.tasks_report_successful_summary", getSuccessfulTasks(issue.Edges.Tasksreports)) }</span>
+														<span class="text-green-600 font-medium">{ i18n.T(ctx, "profiles.issues.tasks_report_successful_summary", getSuccessfulTasks(issue.Edges.Tasksreports)) }</span>
 													}
 													if getFailedTasks(issue.Edges.Tasksreports) > 0 {
-														<span class="text-red-600">{ i18n.T(ctx, "profiles.issues.tasks_report_failed_summary", getFailedTasks(issue.Edges.Tasksreports)) }</span>
+														<span class="text-red-600 font-medium">{ i18n.T(ctx, "profiles.issues.tasks_report_failed_summary", getFailedTasks(issue.Edges.Tasksreports)) }</span>
 													}
-													<a class="underline cursor-pointer" href={ fmt.Sprintf("#modal-overflow-%d", index) } uk-toggle>{ i18n.T(ctx, "profiles.issues.tasks_report_more_info") }</a>
+													if getTimeoutTasks(issue.Edges.Tasksreports) > 0 {
+														<span class="text-amber-600 font-medium">{ i18n.T(ctx, "profiles.issues.tasks_report_timeout_summary", getTimeoutTasks(issue.Edges.Tasksreports)) }</span>
+													}
+													if getPendingTasks(issue.Edges.Tasksreports) > 0 {
+														<span class="text-gray-500 font-medium">{ i18n.T(ctx, "profiles.issues.tasks_report_pending_summary", getPendingTasks(issue.Edges.Tasksreports)) }</span>
+													}
+													<a class="underline cursor-pointer ml-2" href={ fmt.Sprintf("#modal-overflow-%d", index) } uk-toggle>{ i18n.T(ctx, "profiles.issues.tasks_report_more_info") }</a>
 												</div>
 												<div id={ fmt.Sprintf("modal-overflow-%d", index) } uk-modal>
-													<div id="profile-report-modal" class="uk-margin-auto-vertical uk-modal-dialog  w-2/3">
+													<div id="profile-report-modal" class="uk-margin-auto-vertical uk-modal-dialog w-2/3">
 														<button id={ fmt.Sprintf("profile-report-modal-close-%d", index) } class="uk-modal-close-default dark:text-white" type="button" uk-close></button>
 														<div class="flex flex-col gap-4 uk-modal-body" uk-overflow-auto>
 															<h2 class="uk-modal-title dark:text-white">{ i18n.T(ctx, "profiles.issues.tasks_report_for", issue.Edges.Agents.Nickname) }</h2>
@@ -103,12 +112,18 @@ templ ReportDetail(issue *ent.ProfileIssue, commonInfo *partials.CommonInfo, ind
 		for _, t := range issue.Edges.Tasksreports {
 			if t.Edges.Task != nil && !t.Edges.Task.Disabled {
 				<tr>
-					<th class="align-middle" rowspan="4">
-						<div class="flex gap-2">
-							if t.Failed {
+					<th class="align-middle" rowspan="6">
+						<div class="flex items-center gap-2">
+							if t.Timeout {
+								<span class="uk-badge bg-amber-500 text-white">{ i18n.T(ctx, "tasks.status.timeout") }</span>
+							} else if t.Failed || t.Status.String() == "failed" {
 								@partials.Crossmark()
-							} else {
+							} else if t.Status.String() == "running" {
+								<span class="uk-badge uk-badge-primary">{ i18n.T(ctx, "tasks.status.running") }</span>
+							} else if t.Status.String() == "completed" || t.End != "" {
 								@partials.Checkmark()
+							} else {
+								<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
 							}
 							<a
 								href={ templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/tasks/%d", t.Edges.Task.ID))) }
@@ -116,39 +131,86 @@ templ ReportDetail(issue *ent.ProfileIssue, commonInfo *partials.CommonInfo, ind
 								hx-push-url="true"
 								hx-target="#main"
 								hx-swap="outerHTML"
-								class="underline hover:cursor-pointer"
+								class="underline hover:cursor-pointer font-medium"
 								_={ fmt.Sprintf("on click call #profile-report-modal-close-%d.click()", index) }
 							>{ t.Edges.Task.Name }</a>
 						</div>
 					</th>
+					<th><span class="text-nowrap">{ i18n.T(ctx, "tasks.status.label") }</span></th>
+					<td class="dark:text-white">
+						if t.Timeout {
+							<span class="uk-badge bg-amber-500 text-white">{ i18n.T(ctx, "tasks.status.timeout") }</span>
+						} else {
+							switch t.Status.String() {
+								case "running":
+									<span class="uk-badge uk-badge-primary">{ i18n.T(ctx, "tasks.status.running") }</span>
+								case "completed":
+									<span class="uk-badge bg-green-600 text-white">{ i18n.T(ctx, "tasks.status.completed") }</span>
+								case "failed":
+									<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
+								case "pending":
+									<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
+								default:
+									if t.Failed {
+										<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
+									} else {
+										<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
+									}
+							}
+						}
+					</td>
 				</tr>
 				<tr>
-					<th><span class="text-nowrap">{ i18n.T(ctx, "profiles.standard_error") }</span></th>
-					<td class="dark:text-white">{ t.StdError }</td>
+					<th><span class="text-nowrap">{ i18n.T(ctx, "tasks.started_at") }</span></th>
+					<td class="dark:text-white">{ formatTime(t.StartedAt, commonInfo) }</td>
+				</tr>
+				<tr>
+					<th><span class="text-nowrap">{ i18n.T(ctx, "tasks.ended_at") }</span></th>
+					<td class="dark:text-white">{ formatTime(t.End, commonInfo) }</td>
+				</tr>
+				<tr>
+					<th><span class="text-nowrap">{ i18n.T(ctx, "tasks.timeout") }</span></th>
+					<td class="dark:text-white">
+						if t.Timeout {
+							<span class="text-amber-600 font-semibold">{ i18n.T(ctx, "tasks.timed_out") }</span>
+						} else {
+							<span class="text-gray-500">-</span>
+						}
+					</td>
 				</tr>
 				<tr>
 					<th><span class="text-nowrap">{ i18n.T(ctx, "profiles.standard_output") }</span></th>
-					<td class="dark:text-white">{ t.StdOutput }</td>
+					<td class="dark:text-white font-mono text-xs whitespace-pre-wrap">{ t.StdOutput }</td>
 				</tr>
 				<tr>
-					<th>{ i18n.T(ctx, "profiles.execution_time") }</th>
-					if when, err := parseTime(t.End); err == nil {
-						<td class="dark:text-white">{ commonInfo.Translator.FmtDateMedium(when.Local()) + " " + commonInfo.Translator.FmtTimeMedium(when.Local()) }</td>
-					}
-					if _, err := parseTime(t.End); err != nil {
-						<td class="dark:text-white">{ t.End }</td>
-					}
+					<th><span class="text-nowrap">{ i18n.T(ctx, "profiles.standard_error") }</span></th>
+					<td class="dark:text-white font-mono text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap">{ t.StdError }</td>
 				</tr>
 			}
 		}
 	</table>
 }
 
+func formatTime(when string, commonInfo *partials.CommonInfo) string {
+	if when == "" {
+		return "-"
+	}
+	t, err := time.ParseInLocation(time.RFC3339Nano, when, time.Local)
+	if err == nil {
+		return commonInfo.Translator.FmtDateMedium(t.Local()) + " " + commonInfo.Translator.FmtTimeMedium(t.Local())
+	}
+	t, err = time.Parse(time.RFC3339, when)
+	if err == nil {
+		return commonInfo.Translator.FmtDateMedium(t.Local()) + " " + commonInfo.Translator.FmtTimeMedium(t.Local())
+	}
+	return when
+}
+
 func getFailedTasks(taskReports []*ent.TaskReport) int {
 	failed := 0
 
 	for _, t := range taskReports {
-		if t.Failed && !t.Edges.Task.Disabled {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && (t.Failed || t.Status.String() == "failed") && !t.Timeout {
 			failed++
 		}
 	}
@@ -156,11 +218,35 @@ func getFailedTasks(taskReports []*ent.TaskReport) int {
 	return failed
 }
 
+func getTimeoutTasks(taskReports []*ent.TaskReport) int {
+	timeout := 0
+
+	for _, t := range taskReports {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && t.Timeout {
+			timeout++
+		}
+	}
+
+	return timeout
+}
+
+func getRunningTasks(taskReports []*ent.TaskReport) int {
+	running := 0
+
+	for _, t := range taskReports {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && t.Status.String() == "running" && !t.Timeout && !t.Failed {
+			running++
+		}
+	}
+
+	return running
+}
+
 func getSuccessfulTasks(taskReports []*ent.TaskReport) int {
 	successful := 0
 
 	for _, t := range taskReports {
-		if !t.Failed && !t.Edges.Task.Disabled {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && !t.Failed && !t.Timeout && (t.Status.String() == "completed" || t.End != "") {
 			successful++
 		}
 	}
@@ -168,6 +254,14 @@ func getSuccessfulTasks(taskReports []*ent.TaskReport) int {
 	return successful
 }
 
-func parseTime(when string) (time.Time, error) {
-	return time.ParseInLocation(time.RFC3339Nano, when, time.Local)
+func getPendingTasks(taskReports []*ent.TaskReport) int {
+	pending := 0
+
+	for _, t := range taskReports {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && (t.Status.String() == "pending" || (t.StartedAt == "" && t.End == "" && !t.Failed && !t.Timeout)) {
+			pending++
+		}
+	}
+
+	return pending
 }

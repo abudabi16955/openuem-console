@@ -7,13 +7,14 @@ import (
 	"github.com/open-uem/ent"
 	"github.com/open-uem/ent/task"
 	"github.com/open-uem/openuem-console/internal/views/partials"
+	"time"
 )
 
-templ EditTask(c echo.Context, profileID int, t *ent.Task, commonInfo *partials.CommonInfo) {
+templ EditTask(c echo.Context, profileID int, t *ent.Task, reports []*ent.TaskReport, commonInfo *partials.CommonInfo) {
 	@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Tasks")}}, commonInfo)
 	<main class="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
 		<div id="error" class="hidden"></div>
-		<div class="uk-width-1-2@m uk-card uk-card-default">
+		<div class="uk-width-2-3@m uk-card uk-card-default">
 			<div class="uk-card-header">
 				<div class="flex justify-between items-center">
 					<div class="flex flex-col my-4 mx-1">
@@ -25,144 +26,298 @@ templ EditTask(c echo.Context, profileID int, t *ent.Task, commonInfo *partials.
 				</div>
 			</div>
 			<div class="uk-card-body">
-				<form
-					class="flex flex-col gap-4 my-6"
-					hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/tasks/%d", t.ID)))) }
-					hx-target="#main"
-					hx-swap="outerHTML"
-					hx-push-url="false"
-				>
-					<div class="flex flex-col gap-4 w-1/2">
-						<div>
-							<label class="uk-form-label" for="task-description">
-								{ i18n.T(ctx, "tasks.new.name") }
-							</label>
-							<div class="uk-form-controls">
-								<textarea
-									id="task-description"
-									name="task-description"
-									class="uk-textarea"
-									rows="2"
-									placeholder={ i18n.T(ctx, "tasks.new.text") }
-									aria-label="Task description"
-									autocomplete="off"
-									autocorrect="off"
-									autocapitalize="off"
-									spellcheck="false"
-								>
-									{ t.Name }
-								</textarea>
-							</div>
-						</div>
-						@partials.SelectTaskAgentType(t)
-						<div id="select-task-type">
-							@partials.SelectTaskType(t, t.AgentType.String())
-						</div>
-						<div id="select-task-subtype">
-							switch t.Type {
-								case task.TypeWingetInstall, task.TypeWingetDelete:
-									@partials.SelectWinGetPackageTaskSubtype(t)
-								case task.TypeAddRegistryKey, task.TypeAddRegistryKeyValue, task.TypeUpdateRegistryKeyDefaultValue, task.TypeRemoveRegistryKey, task.TypeRemoveRegistryKeyValue:
-									@partials.SelectRegistryTaskSubtype(t)
-								case task.TypeAddLocalUser, task.TypeRemoveLocalUser:
-									@partials.SelectLocalUserTaskSubtype(t)
-								case task.TypeAddLocalGroup, task.TypeRemoveLocalGroup, task.TypeAddUsersToLocalGroup, task.TypeRemoveUsersFromLocalGroup:
-									@partials.SelectWindowsLocalGroupTaskSubtype(t)
-								case task.TypeAddUnixLocalGroup, task.TypeRemoveUnixLocalGroup:
-									@partials.SelectUnixLocalGroupTaskSubtype(t)
-								case task.TypeAddUnixLocalUser, task.TypeRemoveUnixLocalUser:
-									@partials.SelectUnixLocalUserTaskSubtype(t)
-								case task.TypeMsiInstall, task.TypeMsiUninstall:
-									@partials.SelectMSITaskSubtype(t)
-								case task.TypeFlatpakInstall, task.TypeFlatpakUninstall:
-									@partials.SelectFlatpakPackageTaskSubtype(t)
-								case task.TypeBrewFormulaInstall, task.TypeBrewFormulaUninstall, task.TypeBrewFormulaUpgrade:
-									@partials.SelectHomeBrewFormulaTaskSubtype(t)
-								case task.TypeBrewCaskInstall, task.TypeBrewCaskUninstall, task.TypeBrewCaskUpgrade:
-									@partials.SelectHomeBrewCaskTaskSubtype(t)
-								case task.TypeNetbirdInstall, task.TypeNetbirdUninstall, task.TypeNetbirdRegister:
-									@partials.SelectNetbirdTaskSubtype(t)
-									// Future APT subtype
-									// case task.TypeAptInstall, task.TypeAptRemove, task.TypeAptUpdate, task.TypeAptUpdateAll, task.TypeAptUpgradeOs:
-									// 	@partials.SelectAPTTaskSubtype(t)
-							}
-						</div>
-						if t != nil {
-							<input type="hidden" name="selected-task-type" value={ t.Type.String() }/>
-						}
-					</div>
-					if partials.IsWinGetPackageTask(t) {
-						<div class="w-1/2" id="package-partial">
-							@partials.WingetPackageSearch(t)
-						</div>
-					}
-					if partials.IsRegistryTask(t) {
-						<div class="w-1/2" id="registry-partial">
-							@partials.RegistryComponent(t)
-						</div>
-					}
-					if partials.IsLocalUserTask(t) {
-						<div class="w-1/2" id="local-user-partial">
-							@partials.LocalUserComponent(t)
-						</div>
-					}
-					if partials.IsUnixLocalUserTask(t) {
-						<div class="w-1/2" id="local-user-partial">
-							@partials.UnixLocalUserComponent(t)
-						</div>
-					}
-					if partials.IsWindowsLocalGroupTask(t) {
-						<div class="w-1/2" id="local-group-partial">
-							@partials.WindowsLocalGroupComponent(t)
-						</div>
-					}
-					if partials.IsUnixLocalGroupTask(t) {
-						<div class="w-1/2" id="local-group-partial">
-							@partials.UnixLocalGroupComponent(t)
-						</div>
-					}
-					if partials.IsMSITask(t) {
-						<div class="w-1/2" id="msi-partial">
-							@partials.MSIComponent(t)
-						</div>
-					}
-					if partials.IsPowerShellTask(t) {
-						<div class="w-1/2" id="powershell-partial">
-							@partials.PowerShellComponent(t)
-						</div>
-					}
-					if partials.IsUnixScriptTask(t) {
-						<div class="w-1/2" id="unix-script-partial">
-							@partials.UnixScriptComponent(t)
-						</div>
-					}
-					if partials.IsFlatpakTask(t) {
-						<div class="w-1/2" id="flatpak-partial">
-							@partials.FlatpakPackageManagement(t)
-						</div>
-					}
-					if partials.IsHomeBrewFormulaTask(t) || partials.IsHomeBrewCaskTask(t) {
-						<div class="w-1/2" id="brew-partial">
-							@partials.HomeBrewPackageManagement(t)
-						</div>
-					}
-					<div class="flex gap-4 my-4">
-						<button type="submit" class="uk-button uk-button-primary">
-							{ i18n.T(ctx, "tasks.edit.save") }
-						</button>
-						<button
-							type="button"
-							class="uk-button uk-button-default"
-							hx-get={ partials.GetCurrentUrl(c, string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/profiles/%d", profileID))))) }
-							hx-push-url="true"
+				<ul class="uk-tab" uk-tab="connect: #task-edit-switcher">
+					<li class="uk-active">
+						<a href="#">{ i18n.T(ctx, "tasks.tabs.configuration") }</a>
+					</li>
+					<li>
+						<a href="#">{ i18n.T(ctx, "tasks.tabs.endpoints") }</a>
+					</li>
+				</ul>
+				<ul id="task-edit-switcher" class="uk-switcher uk-margin">
+					<li>
+						<form
+							class="flex flex-col gap-4 my-6"
+							hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/tasks/%d", t.ID)))) }
 							hx-target="#main"
 							hx-swap="outerHTML"
+							hx-push-url="false"
 						>
-							{ i18n.T(ctx, "Cancel") }
-						</button>
-					</div>
-				</form>
+							<div class="flex flex-col gap-4 w-1/2">
+								<div>
+									<label class="uk-form-label" for="task-description">
+										{ i18n.T(ctx, "tasks.new.name") }
+									</label>
+									<div class="uk-form-controls">
+										<textarea
+											id="task-description"
+											name="task-description"
+											class="uk-textarea"
+											rows="2"
+											placeholder={ i18n.T(ctx, "tasks.new.text") }
+											aria-label="Task description"
+											autocomplete="off"
+											autocorrect="off"
+											autocapitalize="off"
+											spellcheck="false"
+										>
+											{ t.Name }
+										</textarea>
+									</div>
+								</div>
+								<div>
+									<label class="uk-form-label" for="task-timeout">
+										{ i18n.T(ctx, "tasks.timeout") }
+									</label>
+									<div class="uk-form-controls">
+										<input
+											type="number"
+											id="task-timeout"
+											name="task-timeout"
+											class="uk-input"
+											min="0"
+											value={ fmt.Sprintf("%d", t.Timeout) }
+											placeholder={ i18n.T(ctx, "tasks.timeout_help") }
+										/>
+										<span class="uk-text-small uk-text-muted">{ i18n.T(ctx, "tasks.timeout_help") }</span>
+									</div>
+								</div>
+								@partials.SelectTaskAgentType(t)
+								<div id="select-task-type">
+									@partials.SelectTaskType(t, t.AgentType.String())
+								</div>
+								<div id="select-task-subtype">
+									switch t.Type {
+										case task.TypeWingetInstall, task.TypeWingetDelete:
+											@partials.SelectWinGetPackageTaskSubtype(t)
+										case task.TypeAddRegistryKey, task.TypeAddRegistryKeyValue, task.TypeUpdateRegistryKeyDefaultValue, task.TypeRemoveRegistryKey, task.TypeRemoveRegistryKeyValue:
+											@partials.SelectRegistryTaskSubtype(t)
+										case task.TypeAddLocalUser, task.TypeRemoveLocalUser:
+											@partials.SelectLocalUserTaskSubtype(t)
+										case task.TypeAddLocalGroup, task.TypeRemoveLocalGroup, task.TypeAddUsersToLocalGroup, task.TypeRemoveUsersFromLocalGroup:
+											@partials.SelectWindowsLocalGroupTaskSubtype(t)
+										case task.TypeAddUnixLocalGroup, task.TypeRemoveUnixLocalGroup:
+											@partials.SelectUnixLocalGroupTaskSubtype(t)
+										case task.TypeAddUnixLocalUser, task.TypeRemoveUnixLocalUser:
+											@partials.SelectUnixLocalUserTaskSubtype(t)
+										case task.TypeMsiInstall, task.TypeMsiUninstall:
+											@partials.SelectMSITaskSubtype(t)
+										case task.TypeFlatpakInstall, task.TypeFlatpakUninstall:
+											@partials.SelectFlatpakPackageTaskSubtype(t)
+										case task.TypeBrewFormulaInstall, task.TypeBrewFormulaUninstall, task.TypeBrewFormulaUpgrade:
+											@partials.SelectHomeBrewFormulaTaskSubtype(t)
+										case task.TypeBrewCaskInstall, task.TypeBrewCaskUninstall, task.TypeBrewCaskUpgrade:
+											@partials.SelectHomeBrewCaskTaskSubtype(t)
+										case task.TypeNetbirdInstall, task.TypeNetbirdUninstall, task.TypeNetbirdRegister:
+											@partials.SelectNetbirdTaskSubtype(t)
+									}
+								</div>
+								if t != nil {
+									<input type="hidden" name="selected-task-type" value={ t.Type.String() }/>
+								}
+							</div>
+							if partials.IsWinGetPackageTask(t) {
+								<div class="w-1/2" id="package-partial">
+									@partials.WingetPackageSearch(t)
+								</div>
+							}
+							if partials.IsRegistryTask(t) {
+								<div class="w-1/2" id="registry-partial">
+									@partials.RegistryComponent(t)
+								</div>
+							}
+							if partials.IsLocalUserTask(t) {
+								<div class="w-1/2" id="local-user-partial">
+									@partials.LocalUserComponent(t)
+								</div>
+							}
+							if partials.IsUnixLocalUserTask(t) {
+								<div class="w-1/2" id="local-user-partial">
+									@partials.UnixLocalUserComponent(t)
+								</div>
+							}
+							if partials.IsWindowsLocalGroupTask(t) {
+								<div class="w-1/2" id="local-group-partial">
+									@partials.WindowsLocalGroupComponent(t)
+								</div>
+							}
+							if partials.IsUnixLocalGroupTask(t) {
+								<div class="w-1/2" id="local-group-partial">
+									@partials.UnixLocalGroupComponent(t)
+								</div>
+							}
+							if partials.IsMSITask(t) {
+								<div class="w-1/2" id="msi-partial">
+									@partials.MSIComponent(t)
+								</div>
+							}
+							if partials.IsPowerShellTask(t) {
+								<div class="w-1/2" id="powershell-partial">
+									@partials.PowerShellComponent(t)
+								</div>
+							}
+							if partials.IsUnixScriptTask(t) {
+								<div class="w-1/2" id="unix-script-partial">
+									@partials.UnixScriptComponent(t)
+								</div>
+							}
+							if partials.IsFlatpakTask(t) {
+								<div class="w-1/2" id="flatpak-partial">
+									@partials.FlatpakPackageManagement(t)
+								</div>
+							}
+							if partials.IsHomeBrewFormulaTask(t) || partials.IsHomeBrewCaskTask(t) {
+								<div class="w-1/2" id="brew-partial">
+									@partials.HomeBrewPackageManagement(t)
+								</div>
+							}
+							<div class="flex gap-4 my-4">
+								<button type="submit" class="uk-button uk-button-primary">
+									{ i18n.T(ctx, "tasks.edit.save") }
+								</button>
+								<button
+									type="button"
+									class="uk-button uk-button-default"
+									hx-get={ partials.GetCurrentUrl(c, string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/profiles/%d", profileID))))) }
+									hx-push-url="true"
+									hx-target="#main"
+									hx-swap="outerHTML"
+								>
+									{ i18n.T(ctx, "Cancel") }
+								</button>
+							</div>
+						</form>
+					</li>
+					<li>
+						if len(reports) > 0 {
+							<table class="uk-table uk-table-divider uk-table-small uk-table-hover uk-table-striped mt-6">
+								<thead>
+									<tr>
+										<th>{ i18n.T(ctx, "profiles.issues.endpoint") }</th>
+										<th>{ i18n.T(ctx, "tasks.status.label") }</th>
+										<th>{ i18n.T(ctx, "tasks.started_at") }</th>
+										<th>{ i18n.T(ctx, "tasks.ended_at") }</th>
+										<th>{ i18n.T(ctx, "tasks.actions") }</th>
+									</tr>
+								</thead>
+								<tbody>
+									for idx, report := range reports {
+										<tr>
+											<td class="!align-middle">
+												if report.Edges.Profileissue != nil && report.Edges.Profileissue.Edges.Agents != nil {
+													<a
+														href={ templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/computers/%s", report.Edges.Profileissue.Edges.Agents.ID))) }
+														hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/computers/%s", report.Edges.Profileissue.Edges.Agents.ID)))) }
+														hx-push-url="true"
+														hx-target="#main"
+														hx-swap="outerHTML"
+														class="underline cursor-pointer"
+													>
+														{ report.Edges.Profileissue.Edges.Agents.Nickname }
+													</a>
+												} else {
+													<span>-</span>
+												}
+											</td>
+											<td class="!align-middle">
+												@TaskStatusBadge(report.Status.String(), report.Failed, report.Timeout)
+											</td>
+											<td class="!align-middle">
+												{ formatTimeString(report.StartedAt, commonInfo) }
+											</td>
+											<td class="!align-middle">
+												{ formatTimeString(report.End, commonInfo) }
+											</td>
+											<td class="!align-middle">
+												<a class="underline cursor-pointer" href={ fmt.Sprintf("#task-report-modal-%d", idx) } uk-toggle>
+													{ i18n.T(ctx, "tasks.view_logs") }
+												</a>
+												<div id={ fmt.Sprintf("task-report-modal-%d", idx) } uk-modal>
+													<div class="uk-modal-dialog uk-margin-auto-vertical w-2/3">
+														<button class="uk-modal-close-default dark:text-white" type="button" uk-close></button>
+														<div class="uk-modal-header">
+															<h2 class="uk-modal-title dark:text-white">
+																if report.Edges.Profileissue != nil && report.Edges.Profileissue.Edges.Agents != nil {
+																	{ i18n.T(ctx, "tasks.report_for", report.Edges.Profileissue.Edges.Agents.Nickname) }
+																} else {
+																	{ i18n.T(ctx, "tasks.report_logs") }
+																}
+															</h2>
+														</div>
+														<div class="uk-modal-body flex flex-col gap-4" uk-overflow-auto>
+															<div>
+																<h4 class="font-semibold text-sm mb-1">{ i18n.T(ctx, "profiles.standard_output") }</h4>
+																if report.StdOutput != "" {
+																	<pre class="bg-gray-100 dark:bg-gray-800 p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap">{ report.StdOutput }</pre>
+																} else {
+																	<p class="text-sm text-gray-500 italic">{ i18n.T(ctx, "tasks.no_output") }</p>
+																}
+															</div>
+															<div>
+																<h4 class="font-semibold text-sm mb-1">{ i18n.T(ctx, "profiles.standard_error") }</h4>
+																if report.StdError != "" {
+																	<pre class="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap">{ report.StdError }</pre>
+																} else {
+																	<p class="text-sm text-gray-500 italic">{ i18n.T(ctx, "tasks.no_error") }</p>
+																}
+															</div>
+														</div>
+														<div class="uk-modal-footer text-right">
+															<button class="uk-button uk-button-default uk-modal-close" type="button">{ i18n.T(ctx, "Close") }</button>
+														</div>
+													</div>
+												</div>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						} else {
+							<p class="uk-text-small uk-text-muted mt-6">
+								{ i18n.T(ctx, "tasks.no_reports") }
+							</p>
+						}
+					</li>
+				</ul>
 			</div>
 		</div>
 	</main>
+}
+
+templ TaskStatusBadge(status string, failed bool, isTimeout bool) {
+	if isTimeout {
+		<span class="uk-badge bg-amber-500 text-white">{ i18n.T(ctx, "tasks.status.timeout") }</span>
+	} else {
+		switch status {
+			case "running":
+				<span class="uk-badge uk-badge-primary">{ i18n.T(ctx, "tasks.status.running") }</span>
+			case "completed":
+				<span class="uk-badge bg-green-600 text-white">{ i18n.T(ctx, "tasks.status.completed") }</span>
+			case "failed":
+				<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
+			case "pending":
+				<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
+			default:
+				if failed {
+					<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
+				} else {
+					<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
+				}
+		}
+	}
+}
+
+func formatTimeString(when string, commonInfo *partials.CommonInfo) string {
+	if when == "" {
+		return "-"
+	}
+	t, err := time.ParseInLocation(time.RFC3339Nano, when, time.Local)
+	if err == nil {
+		return commonInfo.Translator.FmtDateMedium(t.Local()) + " " + commonInfo.Translator.FmtTimeMedium(t.Local())
+	}
+	t, err = time.Parse(time.RFC3339, when)
+	if err == nil {
+		return commonInfo.Translator.FmtDateMedium(t.Local()) + " " + commonInfo.Translator.FmtTimeMedium(t.Local())
+	}
+	return when
 }
