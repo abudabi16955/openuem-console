@@ -114,13 +114,13 @@ templ ReportDetail(issue *ent.ProfileIssue, commonInfo *partials.CommonInfo, ind
 				<tr>
 					<th class="align-middle" rowspan="6">
 						<div class="flex items-center gap-2">
-							if t.Timeout {
-								<span class="uk-badge bg-amber-500 text-white">{ i18n.T(ctx, "tasks.status.timeout") }</span>
-							} else if t.Failed || t.Status.String() == "failed" {
-								@partials.Crossmark()
-							} else if t.Status.String() == "running" {
+							if isRunningTask(t) {
 								<span class="uk-badge uk-badge-primary">{ i18n.T(ctx, "tasks.status.running") }</span>
-							} else if t.Status.String() == "completed" || t.End != "" {
+							} else if isTimeoutTask(t) {
+								<span class="uk-badge bg-amber-500 text-white">{ i18n.T(ctx, "tasks.status.timeout") }</span>
+							} else if isFailedTask(t) {
+								@partials.Crossmark()
+							} else if isSuccessfulTask(t) {
 								@partials.Checkmark()
 							} else {
 								<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
@@ -138,25 +138,16 @@ templ ReportDetail(issue *ent.ProfileIssue, commonInfo *partials.CommonInfo, ind
 					</th>
 					<th><span class="text-nowrap">{ i18n.T(ctx, "tasks.status.label") }</span></th>
 					<td class="dark:text-white">
-						if t.Timeout {
+						if isRunningTask(t) {
+							<span class="uk-badge uk-badge-primary">{ i18n.T(ctx, "tasks.status.running") }</span>
+						} else if isTimeoutTask(t) {
 							<span class="uk-badge bg-amber-500 text-white">{ i18n.T(ctx, "tasks.status.timeout") }</span>
+						} else if isFailedTask(t) {
+							<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
+						} else if isSuccessfulTask(t) {
+							<span class="uk-badge bg-green-600 text-white">{ i18n.T(ctx, "tasks.status.completed") }</span>
 						} else {
-							switch t.Status.String() {
-								case "running":
-									<span class="uk-badge uk-badge-primary">{ i18n.T(ctx, "tasks.status.running") }</span>
-								case "completed":
-									<span class="uk-badge bg-green-600 text-white">{ i18n.T(ctx, "tasks.status.completed") }</span>
-								case "failed":
-									<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
-								case "pending":
-									<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
-								default:
-									if t.Failed {
-										<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
-									} else {
-										<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
-									}
-							}
+							<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
 						}
 					</td>
 				</tr>
@@ -206,11 +197,31 @@ func formatTime(when string, commonInfo *partials.CommonInfo) string {
 	return when
 }
 
+func isRunningTask(t *ent.TaskReport) bool {
+	return t != nil && t.Status.String() == "running"
+}
+
+func isTimeoutTask(t *ent.TaskReport) bool {
+	return t != nil && !isRunningTask(t) && t.Timeout
+}
+
+func isFailedTask(t *ent.TaskReport) bool {
+	return t != nil && !isRunningTask(t) && !isTimeoutTask(t) && (t.Failed || t.Status.String() == "failed")
+}
+
+func isSuccessfulTask(t *ent.TaskReport) bool {
+	return t != nil && !isRunningTask(t) && !isTimeoutTask(t) && !isFailedTask(t) && (t.Status.String() == "completed" || t.End != "")
+}
+
+func isPendingTask(t *ent.TaskReport) bool {
+	return t != nil && !isRunningTask(t) && !isTimeoutTask(t) && !isFailedTask(t) && !isSuccessfulTask(t)
+}
+
 func getFailedTasks(taskReports []*ent.TaskReport) int {
 	failed := 0
 
 	for _, t := range taskReports {
-		if t.Edges.Task != nil && !t.Edges.Task.Disabled && (t.Failed || t.Status.String() == "failed") && !t.Timeout {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && isFailedTask(t) {
 			failed++
 		}
 	}
@@ -222,7 +233,7 @@ func getTimeoutTasks(taskReports []*ent.TaskReport) int {
 	timeout := 0
 
 	for _, t := range taskReports {
-		if t.Edges.Task != nil && !t.Edges.Task.Disabled && t.Timeout {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && isTimeoutTask(t) {
 			timeout++
 		}
 	}
@@ -234,7 +245,7 @@ func getRunningTasks(taskReports []*ent.TaskReport) int {
 	running := 0
 
 	for _, t := range taskReports {
-		if t.Edges.Task != nil && !t.Edges.Task.Disabled && t.Status.String() == "running" && !t.Timeout && !t.Failed {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && isRunningTask(t) {
 			running++
 		}
 	}
@@ -246,7 +257,7 @@ func getSuccessfulTasks(taskReports []*ent.TaskReport) int {
 	successful := 0
 
 	for _, t := range taskReports {
-		if t.Edges.Task != nil && !t.Edges.Task.Disabled && !t.Failed && !t.Timeout && (t.Status.String() == "completed" || t.End != "") {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && isSuccessfulTask(t) {
 			successful++
 		}
 	}
@@ -258,7 +269,7 @@ func getPendingTasks(taskReports []*ent.TaskReport) int {
 	pending := 0
 
 	for _, t := range taskReports {
-		if t.Edges.Task != nil && !t.Edges.Task.Disabled && (t.Status.String() == "pending" || (t.StartedAt == "" && t.End == "" && !t.Failed && !t.Timeout)) {
+		if t.Edges.Task != nil && !t.Edges.Task.Disabled && isPendingTask(t) {
 			pending++
 		}
 	}
