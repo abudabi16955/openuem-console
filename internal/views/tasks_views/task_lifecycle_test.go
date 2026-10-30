@@ -32,7 +32,15 @@ func TestTaskLifecycleStatusBadges(t *testing.T) {
 		failed, timeout bool
 		want            string
 	}{
-		{"pending", false, false, "pending"}, {"running", false, false, "running"}, {"completed", false, false, "completed"}, {"failed", true, false, "failed"}, {"failed", true, true, "timeout"},
+		{"pending", false, false, "pending"},
+		{"running", false, false, "running"},
+		{"running", true, true, "running"},
+		{"completed", false, false, "completed"},
+		{"failed", true, false, "failed"},
+		{"", true, false, "failed"},
+		{"failed", true, true, "timeout"},
+		{"pending", false, true, "timeout"},
+		{"unknown", false, false, "pending"},
 	} {
 		t.Run(tc.want, func(t *testing.T) {
 			var b bytes.Buffer
