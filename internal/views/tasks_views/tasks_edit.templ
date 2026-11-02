@@ -285,25 +285,16 @@ templ EditTask(c echo.Context, profileID int, t *ent.Task, reports []*ent.TaskRe
 }
 
 templ TaskStatusBadge(status string, failed bool, isTimeout bool) {
-	if isTimeout {
+	if status == "running" {
+		<span class="uk-badge uk-badge-primary">{ i18n.T(ctx, "tasks.status.running") }</span>
+	} else if isTimeout {
 		<span class="uk-badge bg-amber-500 text-white">{ i18n.T(ctx, "tasks.status.timeout") }</span>
+	} else if failed || status == "failed" {
+		<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
+	} else if status == "completed" {
+		<span class="uk-badge bg-green-600 text-white">{ i18n.T(ctx, "tasks.status.completed") }</span>
 	} else {
-		switch status {
-			case "running":
-				<span class="uk-badge uk-badge-primary">{ i18n.T(ctx, "tasks.status.running") }</span>
-			case "completed":
-				<span class="uk-badge bg-green-600 text-white">{ i18n.T(ctx, "tasks.status.completed") }</span>
-			case "failed":
-				<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
-			case "pending":
-				<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
-			default:
-				if failed {
-					<span class="uk-badge uk-badge-danger">{ i18n.T(ctx, "tasks.status.failed") }</span>
-				} else {
-					<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
-				}
-		}
+		<span class="uk-badge uk-badge-secondary">{ i18n.T(ctx, "tasks.status.pending") }</span>
 	}
 }
 

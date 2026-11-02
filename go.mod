@@ -133,3 +133,7 @@ require (
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/open-uem/nats => github.com/abudabi16955/nats v0.0.0-20261029182802-f0f51748fee9
+
+replace github.com/open-uem/ent => github.com/abudabi16955/ent v0.0.0-20261027070654-78daeb184557
