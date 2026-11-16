@@ -10,6 +10,7 @@ import (
 	"github.com/open-uem/openuem-console/internal/controllers/webserver"
 	"github.com/open-uem/openuem-console/internal/models"
 	"github.com/open-uem/utils"
+	"github.com/open-uem/openuem-console/internal/crypto"
 )
 
 type Worker struct {
@@ -60,6 +61,7 @@ type Worker struct {
 	ResetOpenUEMUser                  bool
 	AuthLogger                        *log.Logger
 	EncryptionMasterKey               string
+	VaultKey                          []byte
 }
 
 func NewWorker(logName string) *Worker {
@@ -74,6 +76,9 @@ func NewWorker(logName string) *Worker {
 }
 
 func (w *Worker) StartWorker() {
+	if len(w.VaultKey) == 0 {
+		w.VaultKey = crypto.MustGetVaultKey()
+	}
 	// Start a job to try to connect with the database
 	if err := w.StartDBConnectJob(); err != nil {
 		log.Fatalf("[FATAL]: could not start DB connect job, reason: %s", err.Error())

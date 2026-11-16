@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/open-uem/openuem-console/internal/common"
+	"github.com/open-uem/openuem-console/internal/crypto"
 )
 
 func main() {
@@ -50,6 +51,8 @@ func main() {
 	if err := w.CreateServerReleasesDir(); err != nil {
 		log.Fatalf("[FATAL]: could not create server releases temp dir: %v", err)
 	}
+
+	w.VaultKey = crypto.MustGetVaultKey()
 
 	// Start the worker
 	w.StartWorker()

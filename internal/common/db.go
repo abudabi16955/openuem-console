@@ -20,6 +20,7 @@ func (w *Worker) StartDBConnectJob() error {
 
 	w.Model, err = models.New(w.DBUrl, "pgx", w.Domain)
 	if err == nil {
+		w.Model.VaultKey = w.VaultKey
 		log.Println("[INFO]: connection established with database")
 
 		if err := w.Model.CreateInitialSettings(); err != nil {

@@ -21,7 +21,8 @@ import (
 )
 
 type Model struct {
-	Client *ent.Client
+	Client   *ent.Client
+	VaultKey []byte
 }
 
 func New(dbUrl string, driverName, domain string) (*Model, error) {
