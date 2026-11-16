@@ -34,9 +34,13 @@ func TestBitLockerKeyRevealed_UnifiedMonospaceAndGap(t *testing.T) {
 	}
 	s := b.String()
 
-	expectedClass := "px-3 py-1.5 text-xs font-mono font-bold tracking-wider bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-800 dark:text-slate-100 select-all shadow-sm"
+	expectedClass := "font-mono text-xs font-bold tracking-wider dark:text-white bg-muted px-2.5 py-1.5 rounded select-all shadow-sm"
 	if !strings.Contains(s, expectedClass) {
 		t.Errorf("missing unified monospace class %q in rendered output:\n%s", expectedClass, s)
+	}
+
+	if !strings.Contains(s, "<code") {
+		t.Errorf("expected <code> tag in rendered output:\n%s", s)
 	}
 
 	if !strings.Contains(s, pwd) {
@@ -45,6 +49,10 @@ func TestBitLockerKeyRevealed_UnifiedMonospaceAndGap(t *testing.T) {
 
 	if !strings.Contains(s, "flex items-center gap-2 ml-1 text-xs") {
 		t.Errorf("expected copy button to have gap-2, got:\n%s", s)
+	}
+
+	if strings.Contains(s, "slate") {
+		t.Errorf("expected no slate classes in output, got:\n%s", s)
 	}
 }
 
@@ -68,14 +76,27 @@ func TestBitLockerRevealModal_HxOnAndDarkModeContrast(t *testing.T) {
 		t.Errorf("expected modal closing via hx-on::after-request, got:\n%s", s)
 	}
 
-	expectedDriveKeyContrast := "text-slate-800 dark:text-slate-100"
-	if !strings.Contains(s, expectedDriveKeyContrast) {
-		t.Errorf("expected drive & key ID to have explicit text contrast %q, got:\n%s", expectedDriveKeyContrast, s)
+	expectedDriveKeyInput := `class="uk-input font-mono text-xs"`
+	if !strings.Contains(s, expectedDriveKeyInput) {
+		t.Errorf("expected drive & key ID input with classes %q, got:\n%s", expectedDriveKeyInput, s)
+	}
+
+	expectedValue := `value="C: - {TEST-KEY-ID-123}"`
+	if !strings.Contains(s, expectedValue) {
+		t.Errorf("expected input value %q, got:\n%s", expectedValue, s)
+	}
+
+	if !strings.Contains(s, "readonly") {
+		t.Errorf("expected readonly attribute on input, got:\n%s", s)
 	}
 
 	expectedReasonLabel := `class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"`
 	if !strings.Contains(s, expectedReasonLabel) {
 		t.Errorf("expected Reason label to have %q, got:\n%s", expectedReasonLabel, s)
+	}
+
+	if strings.Contains(s, "slate") {
+		t.Errorf("expected no slate classes in modal output, got:\n%s", s)
 	}
 }
 
@@ -136,5 +157,9 @@ func TestBitLockerSection_BadgesSpacingAndEscrowGap(t *testing.T) {
 	sEmpty := bEmpty.String()
 	if !strings.Contains(sEmpty, `class="uk-text-small uk-text-muted mt-4 mb-4"`) {
 		t.Errorf("expected empty state to have mt-4 mb-4, got:\n%s", sEmpty)
+	}
+
+	if strings.Contains(s, "slate") {
+		t.Errorf("expected no slate classes in section output, got:\n%s", s)
 	}
 }
