@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/open-uem/openuem-console/internal/common"
+	"github.com/open-uem/openuem-console/internal/crypto"
 	"github.com/open-uem/utils"
 	"golang.org/x/sys/windows/svc"
 )
@@ -61,6 +62,8 @@ func main() {
 	if err := w.CreateServerReleasesDir(); err != nil {
 		log.Fatalf("[FATAL]: could not create server releases temp dir: %v", err)
 	}
+
+	w.VaultKey = crypto.MustGetVaultKey()
 
 	// Configure the windows service
 	s := utils.NewOpenUEMWindowsService()

@@ -367,7 +367,9 @@ func (h *Handler) LogicalDisks(c echo.Context) error {
 
 	offline := h.IsAgentOffline(c)
 
-	return RenderView(c, computers_views.InventoryIndex(" | Inventory", computers_views.LogicalDisks(c, p, agent, confirmDelete, commonInfo, netbird, offline), commonInfo))
+	bitlockerKeys, _ := h.Model.GetBitLockerKeysForAgent(agentId)
+
+	return RenderView(c, computers_views.InventoryIndex(" | Inventory", computers_views.LogicalDisks(c, p, agent, confirmDelete, commonInfo, netbird, offline, bitlockerKeys), commonInfo))
 }
 
 func (h *Handler) PhysicalDisks(c echo.Context) error {

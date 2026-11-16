@@ -129,5 +129,11 @@ func StartConsoleFlags() []cli.Flag {
 			Usage:   "master key used to encrypt sensitive fields in the database, need to be 32 bytes long (for example 32 ASCII characters)",
 			EnvVars: []string{"ENCRYPTION_MASTER_KEY"},
 		},
+		&cli.StringFlag{
+			Name:     "vault-key",
+			Usage:    "base64-encoded 32-byte key used for BitLocker recovery vault encryption and decryption",
+			EnvVars:  []string{"OPENUEM_VAULT_KEY"},
+			Required: true,
+		},
 	}
 }

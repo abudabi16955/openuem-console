@@ -9,6 +9,7 @@ import (
 	ent "github.com/open-uem/ent"
 	"github.com/open-uem/ent/agent"
 	"github.com/open-uem/ent/app"
+	"github.com/open-uem/ent/bitlockerkey"
 	"github.com/open-uem/ent/computer"
 	"github.com/open-uem/ent/networkadapter"
 	"github.com/open-uem/ent/operatingsystem"
@@ -67,7 +68,7 @@ func (m *Model) CountAllComputers(f filters.AgentFilter, c *partials.CommonInfo)
 	}
 
 	// Apply filters
-	applyComputerFilters(query, f)
+	applyComputerFilters(m.Client, query, f)
 
 	count, err := query.Count(context.Background())
 	if err != nil {
@@ -162,7 +163,7 @@ func (m *Model) GetComputersByPage(p partials.PaginationAndSort, f filters.Agent
 	}
 
 	// Apply filters
-	applyComputerFilters(query, f)
+	applyComputerFilters(m.Client, query, f)
 
 	// Apply sort
 	switch p.SortBy {
@@ -288,7 +289,7 @@ func (m *Model) GetComputersByPage(p partials.PaginationAndSort, f filters.Agent
 	return computers, nil
 }
 
-func applyComputerFilters(query *ent.AgentQuery, f filters.AgentFilter) {
+func applyComputerFilters(client *ent.Client, query *ent.AgentQuery, f filters.AgentFilter) {
 	if len(f.Nickname) > 0 {
 		query.Where(agent.NicknameContainsFold(f.Nickname))
 	}
@@ -345,13 +346,23 @@ func applyComputerFilters(query *ent.AgentQuery, f filters.AgentFilter) {
 	}
 
 	if len(f.Search) > 0 {
-		query.Where(agent.Or(
+		orPredicates := []predicate.Agent{
 			agent.NicknameContainsFold(f.Search),
 			agent.OsIn(f.Search),
 			agent.HasOperatingsystemWith(operatingsystem.UsernameContainsFold(f.Search)),
 			agent.HasComputerWith(computer.ManufacturerContainsFold(f.Search)),
 			agent.HasComputerWith(computer.ModelContainsFold(f.Search)),
-		))
+		}
+		if client != nil {
+			agentIDsWithKey, err := client.BitlockerKey.Query().
+				Where(bitlockerkey.KeyIDContainsFold(f.Search)).
+				Select(bitlockerkey.FieldAgentID).
+				Strings(context.Background())
+			if err == nil && len(agentIDsWithKey) > 0 {
+				orPredicates = append(orPredicates, agent.IDIn(agentIDsWithKey...))
+			}
+		}
+		query.Where(agent.Or(orPredicates...))
 	}
 }
 

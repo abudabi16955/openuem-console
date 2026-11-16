@@ -1,6 +1,7 @@
 package common
 
 import (
+	"os"
 	"github.com/open-uem/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -54,6 +55,12 @@ func (w *Worker) GenerateConsoleConfigFromCLI(cCtx *cli.Context) error {
 	w.ResetOpenUEMUser = cCtx.Bool("reset-openuem-user")
 	w.Version = "0.12.0"
 	w.EncryptionMasterKey = cCtx.String("encryption-master-key")
+
+	if vaultKey := cCtx.String("vault-key"); vaultKey != "" {
+		if os.Getenv("OPENUEM_VAULT_KEY") == "" {
+			_ = os.Setenv("OPENUEM_VAULT_KEY", vaultKey)
+		}
+	}
 
 	return nil
 }

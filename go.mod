@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	entgo.io/ent v0.14.5
-	github.com/PuerkitoBio/goquery v1.10.1
+	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/a-h/templ v0.3.1001
 	github.com/alexedwards/argon2id v1.0.0
 	github.com/alexedwards/scs/v2 v2.9.0
@@ -114,6 +114,7 @@ require (
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/tiendc/go-deepcopy v1.7.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
@@ -130,10 +131,10 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
-	google.golang.org/protobuf v1.36.8 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/open-uem/nats => github.com/abudabi16955/nats v0.0.0-20261029182802-f0f51748fee9
+replace github.com/open-uem/nats => github.com/abudabi16955/nats v0.0.0-20261116164838-d260a216a7f0
 
 replace github.com/open-uem/ent => github.com/abudabi16955/ent v0.0.0-20261027070654-78daeb184557

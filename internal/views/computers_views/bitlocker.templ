@@ -1,0 +1,249 @@
+package computers_views
+
+import (
+	"fmt"
+	"strings"
+	"time"
+	"github.com/invopop/ctxi18n/i18n"
+	"github.com/labstack/echo/v4"
+	ent "github.com/open-uem/ent"
+	"github.com/open-uem/openuem-console/internal/views/partials"
+)
+
+func SafeKeyID(keyID string) string {
+	r := strings.NewReplacer("{", "", "}", "", " ", "_", ":", "_")
+	return r.Replace(keyID)
+}
+
+func FormatBitLockerKeyGroups(pwd string) []string {
+	clean := strings.ReplaceAll(pwd, "-", "")
+	clean = strings.TrimSpace(clean)
+	if len(clean) == 48 {
+		groups := make([]string, 8)
+		for i := 0; i < 8; i++ {
+			groups[i] = clean[i*6 : (i+1)*6]
+		}
+		return groups
+	}
+	parts := strings.Split(pwd, "-")
+	if len(parts) == 8 {
+		return parts
+	}
+	return []string{pwd}
+}
+
+script copyBitLockerKey(password string) {
+	navigator.clipboard.writeText(password);
+	if (window.UIkit) {
+		UIkit.notification({message: 'Recovery key copied to clipboard!', status: 'success', pos: 'bottom-right'});
+	}
+}
+
+templ BitLockerKeyRevealed(keyID string, password string) {
+	<div id={ "bitlocker-key-" + SafeKeyID(keyID) } class="flex flex-col gap-2">
+		<div class="flex flex-wrap gap-1.5 items-center">
+			for _, grp := range FormatBitLockerKeyGroups(password) {
+				<span class="px-2 py-1 text-xs font-mono font-bold tracking-wider bg-blue-50 dark:bg-blue-950/50 border border-blue-300 dark:border-blue-700 rounded text-blue-700 dark:text-blue-300 select-all shadow-sm">
+					{ grp }
+				</span>
+			}
+			<button
+				type="button"
+				class="uk-button uk-button-small uk-button-default flex items-center gap-1 ml-1 text-xs"
+				onclick={ copyBitLockerKey(password) }
+				uk-tooltip="Copy to clipboard"
+			>
+				<uk-icon icon="copy" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
+				<span>Copy</span>
+			</button>
+		</div>
+	</div>
+}
+
+templ BitLockerKeyMasked(keyID string, modalID string) {
+	<div id={ "bitlocker-key-" + SafeKeyID(keyID) } class="flex items-center gap-2">
+		<span class="font-mono text-xs tracking-wider text-muted-foreground select-none">
+			••••••-••••••-••••••-••••••-••••••-••••••-••••••-••••••
+		</span>
+		<button
+			type="button"
+			class="uk-button uk-button-small uk-button-primary flex items-center gap-1 text-xs"
+			uk-toggle={ "target: #" + modalID }
+		>
+			<uk-icon icon="eye" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
+			<span>Reveal</span>
+		</button>
+	</div>
+}
+
+templ BitLockerRevealModal(key *ent.BitlockerKey, revealUrl string, modalID string) {
+	<div id={ modalID } uk-modal>
+		<div class="uk-modal-dialog uk-margin-auto-vertical">
+			<button class="uk-modal-close-default dark:text-white" type="button" uk-close></button>
+			<form
+				hx-post={ revealUrl }
+				hx-target={ "#bitlocker-key-" + SafeKeyID(key.KeyID) }
+				hx-swap="outerHTML"
+				_="on htmx:afterRequest if event.detail.successful UIkit.modal(closest('[uk-modal]')).hide()"
+			>
+				<input type="hidden" name="key_id" value={ key.KeyID }/>
+				<div class="uk-modal-header">
+					<h3 class="uk-modal-title dark:text-white flex items-center gap-2">
+						<uk-icon icon="shield-alert" custom-class="h-5 w-5 text-amber-500" uk-cloak></uk-icon>
+						<span>Reveal BitLocker Recovery Key</span>
+					</h3>
+				</div>
+				<div class="uk-modal-body flex flex-col gap-3">
+					<p class="text-sm text-muted-foreground">
+						Access to this recovery key will be permanently recorded in the audit log. Please state the reason for viewing this key (minimum 5 characters).
+					</p>
+					<div class="flex flex-col gap-1">
+						<label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Drive & Key ID</label>
+						<p class="font-mono text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">{ key.DriveLetter } - { key.KeyID }</p>
+					</div>
+					<div class="flex flex-col gap-1">
+						<label for={ "reason-" + SafeKeyID(key.KeyID) } class="text-xs font-semibold uppercase tracking-wider">Reason <span class="text-red-500">*</span></label>
+						<textarea
+							id={ "reason-" + SafeKeyID(key.KeyID) }
+							name="reason"
+							class="uk-textarea text-sm"
+							rows="3"
+							placeholder="e.g., Device unlock after motherboard replacement"
+							required
+							minlength="5"
+						></textarea>
+					</div>
+				</div>
+				<div class="uk-modal-footer text-right flex justify-end gap-2">
+					<button class="uk-button uk-button-default uk-modal-close" type="button">Cancel</button>
+					<button class="uk-button uk-button-primary flex items-center gap-1.5" type="submit">
+						<uk-icon icon="unlock" custom-class="h-4 w-4" uk-cloak></uk-icon>
+						<span>Reveal Key</span>
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+templ BitLockerSection(c echo.Context, agent *ent.Agent, bitlockerKeys []*ent.BitlockerKey, commonInfo *partials.CommonInfo) {
+	{{
+		revealUrl := string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/computers/%s/bitlocker/reveal", agent.ID))))
+		forceEscrowUrl := string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/computers/%s/bitlocker/force-escrow", agent.ID))))
+
+		var activeKeys []*ent.BitlockerKey
+		var historyKeys []*ent.BitlockerKey
+		for _, k := range bitlockerKeys {
+			if k.IsActive {
+				activeKeys = append(activeKeys, k)
+			} else {
+				historyKeys = append(historyKeys, k)
+			}
+		}
+	}}
+	<div class="uk-width-1-2@m uk-card uk-card-default">
+		<div class="uk-card-header">
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<uk-icon hx-history="false" icon="shield-check" custom-class="h-5 w-5 text-blue-600 dark:text-blue-400" uk-cloak></uk-icon>
+					<h3 class="uk-card-title">{ i18n.T(ctx, "inventory.logical_disk.bitlocker_title") }</h3>
+				</div>
+				<button
+					type="button"
+					class="uk-button uk-button-small uk-button-default flex items-center gap-1.5 text-xs"
+					hx-post={ forceEscrowUrl }
+					hx-swap="none"
+					_="on htmx:afterRequest if event.detail.successful UIkit.notification({message: 'BitLocker escrow request sent to agent', status: 'success', pos: 'bottom-right'}) else UIkit.notification({message: 'Failed to request BitLocker escrow', status: 'danger', pos: 'bottom-right'})"
+					uk-tooltip="Trigger agent to escrow current BitLocker keys"
+				>
+					<uk-icon icon="refresh-cw" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
+					<span>{ i18n.T(ctx, "inventory.logical_disk.bitlocker_force_escrow") }</span>
+				</button>
+			</div>
+			<p class="uk-margin-small-top uk-text-small">
+				{ i18n.T(ctx, "inventory.logical_disk.bitlocker_description") }
+			</p>
+		</div>
+		<div class="uk-card-body">
+			if len(activeKeys) > 0 {
+				<h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+					<span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+					<span>Active Recovery Keys</span>
+				</h4>
+				<table class="uk-table uk-table-divider uk-table-small uk-table-striped mb-6">
+					<thead>
+						<tr>
+							<th class="w-16">{ i18n.T(ctx, "inventory.logical_disk.label") }</th>
+							<th>{ i18n.T(ctx, "inventory.logical_disk.bitlocker_key_id") }</th>
+							<th>{ i18n.T(ctx, "inventory.logical_disk.bitlocker_recovery_password") }</th>
+							<th>{ i18n.T(ctx, "inventory.logical_disk.bitlocker_escrowed_at") }</th>
+							<th>Status</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, k := range activeKeys {
+							{{
+								modalID := fmt.Sprintf("modal-reveal-%s", SafeKeyID(k.KeyID))
+							}}
+							<tr>
+								<td class="!align-middle font-bold">{ k.DriveLetter }</td>
+								<td class="!align-middle font-mono text-xs">{ k.KeyID }</td>
+								<td class="!align-middle">
+									@BitLockerKeyMasked(k.KeyID, modalID)
+									@BitLockerRevealModal(k, revealUrl, modalID)
+								</td>
+								<td class="!align-middle text-xs text-muted-foreground">{ k.CreatedAt.Format(time.RFC822) }</td>
+								<td class="!align-middle">
+									<span class="uk-badge bg-emerald-600 text-white text-xs px-2 py-0.5 rounded">Active</span>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			} else {
+				<p class="uk-text-small uk-text-muted mb-4">
+					{ i18n.T(ctx, "inventory.logical_disk.bitlocker_no_keys") }
+				</p>
+			}
+
+			if len(historyKeys) > 0 {
+				<div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+					<h4 class="text-sm font-semibold mb-3 flex items-center gap-2 text-muted-foreground">
+						<uk-icon icon="history" custom-class="h-4 w-4" uk-cloak></uk-icon>
+						<span>{ i18n.T(ctx, "inventory.logical_disk.bitlocker_history") }</span>
+					</h4>
+					<table class="uk-table uk-table-divider uk-table-small uk-table-striped">
+						<thead>
+							<tr>
+								<th class="w-16">{ i18n.T(ctx, "inventory.logical_disk.label") }</th>
+								<th>{ i18n.T(ctx, "inventory.logical_disk.bitlocker_key_id") }</th>
+								<th>{ i18n.T(ctx, "inventory.logical_disk.bitlocker_recovery_password") }</th>
+								<th>{ i18n.T(ctx, "inventory.logical_disk.bitlocker_escrowed_at") }</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, k := range historyKeys {
+								{{
+									modalID := fmt.Sprintf("modal-reveal-%s", SafeKeyID(k.KeyID))
+								}}
+								<tr class="opacity-75">
+									<td class="!align-middle font-bold">{ k.DriveLetter }</td>
+									<td class="!align-middle font-mono text-xs">{ k.KeyID }</td>
+									<td class="!align-middle">
+										@BitLockerKeyMasked(k.KeyID, modalID)
+										@BitLockerRevealModal(k, revealUrl, modalID)
+									</td>
+									<td class="!align-middle text-xs text-muted-foreground">{ k.CreatedAt.Format(time.RFC822) }</td>
+									<td class="!align-middle">
+										<span class="uk-badge bg-slate-500 text-white text-xs px-2 py-0.5 rounded">Rotated</span>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</div>
+	</div>
+}
