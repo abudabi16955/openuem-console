@@ -70,6 +70,17 @@ templ NavBar(active string, commonInfo *CommonInfo) {
 				<span class="sr-only">{ i18n.T(ctx, "Deploy") }</span>
 			</a>
 			<a
+				href={ templ.URL(GetNavigationUrl(commonInfo, "/packages")) }
+				hx-get={ string(templ.URL(GetNavigationUrl(commonInfo, "/packages"))) }
+				hx-push-url="true"
+				hx-target="body"
+				uk-tooltip={ fmt.Sprintf("title: %s; pos: right", i18n.T(ctx, "Self-Service", i18n.Default("Self-Service"))) }
+				class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8", templ.KV("bg-primary text-primary-foreground", active == "packages"), templ.KV("text-muted-foreground hover:text-foreground", active != "packages") }
+			>
+				<uk-icon hx-history="false" icon="boxes" custom-class="h-5 w-5" uk-cloack></uk-icon>
+				<span class="sr-only">{ i18n.T(ctx, "Self-Service", i18n.Default("Self-Service")) }</span>
+			</a>
+			<a
 				href={ templ.URL(GetNavigationUrl(commonInfo, "/profiles")) }
 				hx-get={ string(templ.URL(GetNavigationUrl(commonInfo, "/profiles"))) }
 				hx-push-url="true"

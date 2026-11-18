@@ -285,7 +285,7 @@ func (suite *UserTestSuite) TestAddLocalUser() {
 }
 
 func (suite *UserTestSuite) TestAddOIDCUser() {
-	_, err := suite.model.AddUser("user7", "User7", "user7@example.com", "", "ES", "certificate")
+	err := suite.model.AddOIDCUser("user7", "User7", "user7@example.com", "", true, false)
 	assert.NoError(suite.T(), err, "should add a new user")
 
 	user, err := suite.model.GetUserById("user7")
@@ -294,7 +294,6 @@ func (suite *UserTestSuite) TestAddOIDCUser() {
 	assert.Equal(suite.T(), "User7", user.Name, "user should have User7 name")
 	assert.Equal(suite.T(), "user7@example.com", user.Email, "user should have user7@example.com email")
 	assert.Equal(suite.T(), "", user.Phone, "user should have empty phone")
-	assert.Equal(suite.T(), "ES", user.Country, "user should have ES country")
 	assert.Equal(suite.T(), "users.review_request", user.Register, "user should have users.review_request register status")
 }
 
@@ -376,7 +375,7 @@ func (suite *UserTestSuite) TestConfirmEmail() {
 	assert.Equal(suite.T(), "user4", user.ID, "user should have user4 id")
 	assert.Equal(suite.T(), "User 4", user.Name, "user should have User4 name")
 	assert.Equal(suite.T(), true, user.EmailVerified, "user should have email verified")
-	assert.Equal(suite.T(), openuem_nats.REGISTER_IN_REVIEW, user.Register)
+	assert.Equal(suite.T(), openuem_nats.REGISTER_SEND_CERTIFICATE, user.Register)
 }
 
 func (suite *UserTestSuite) TestUserSetRevokedCertificate() {
