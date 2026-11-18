@@ -136,6 +136,13 @@ type DeployPackageFilter struct {
 	Arch    string
 }
 
+type SelfServicePackageFilter struct {
+	Search   string
+	Category string
+	Type     string
+	Enabled  string
+}
+
 func GetPaginationUrl(c echo.Context) string {
 	// If Hx-Replace-Url is set in the header that means that we come from a dialog
 	// and that we force to go to page 1, to avoid going to a non-existent page

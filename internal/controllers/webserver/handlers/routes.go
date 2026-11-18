@@ -542,6 +542,29 @@ func (h *Handler) Register(e *echo.Echo, registerRateLimit float64) {
 	e.GET("/tenant/:tenant/site/:site/software", h.Software, h.IsAuthenticated)
 	e.POST("/tenant/:tenant/site/:site/software", h.Software, h.IsAuthenticated)
 
+	// Self-Service Packages
+	e.GET("/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/packages/new", h.SavePackage, h.IsAuthenticated)
+	e.POST("/packages/edit/:id", h.UpdatePackage, h.IsAuthenticated)
+	e.DELETE("/packages/:id", h.DeletePackage, h.IsAuthenticated)
+
+	e.GET("/tenant/:tenant/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/packages/new", h.SavePackage, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/packages/edit/:id", h.UpdatePackage, h.IsAuthenticated)
+	e.DELETE("/tenant/:tenant/packages/:id", h.DeletePackage, h.IsAuthenticated)
+
+	e.GET("/tenant/:tenant/site/:site/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/packages/new", h.SavePackage, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/packages/edit/:id", h.UpdatePackage, h.IsAuthenticated)
+	e.DELETE("/tenant/:tenant/site/:site/packages/:id", h.DeletePackage, h.IsAuthenticated)
+
+	// Self-Service Packages API (download supports both console session and mTLS for agent)
+	e.GET("/api/v1/packages", h.APIGetPackages)
+	e.GET("/api/v1/packages/download/:id", h.DownloadPackage)
+
 	e.GET("/tasks/:profile/new", h.NewTask, h.IsAuthenticated)
 	e.POST("/tasks/:profile/new", h.NewTask, h.IsAuthenticated)
 	e.GET("/tasks/:id", h.EditTask, h.IsAuthenticated)

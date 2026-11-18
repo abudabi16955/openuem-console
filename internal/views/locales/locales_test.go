@@ -38,7 +38,7 @@ var expectedBitLockerKeys = []string{
 }
 
 func TestLocales_BitLockerKeysComplete(t *testing.T) {
-	locales := []string{"en", "ca", "de", "es", "fr", "no", "pt"}
+	locales := []string{"en", "ca", "de", "es", "fr", "no", "pl", "pt"}
 
 	for _, loc := range locales {
 		t.Run(loc, func(t *testing.T) {
