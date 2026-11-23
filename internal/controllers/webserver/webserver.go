@@ -1,6 +1,8 @@
 package webserver
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"log"
 	"net/http"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/open-uem/openuem-console/internal/controllers/sessions"
 	"github.com/open-uem/openuem-console/internal/controllers/webserver/handlers"
 	"github.com/open-uem/openuem-console/internal/models"
+	"github.com/open-uem/utils"
 )
 
 type WebServer struct {
@@ -51,9 +54,23 @@ func New(m *models.Model, natsServers string, s *sessions.SessionManager, ts goc
 }
 
 func (w *WebServer) Serve(address, certFile, certKey string) error {
+	var tlsConfig *tls.Config
+	if w.Handler != nil && w.Handler.CACertPath != "" {
+		caCert, err := utils.ReadPEMCertificate(w.Handler.CACertPath)
+		if err == nil && caCert != nil {
+			cp := x509.NewCertPool()
+			cp.AddCert(caCert)
+			tlsConfig = &tls.Config{
+				ClientAuth: tls.RequestClientCert,
+				ClientCAs:  cp,
+			}
+		}
+	}
+
 	w.Server = &http.Server{
-		Addr:    address,
-		Handler: w.Router,
+		Addr:      address,
+		Handler:   w.Router,
+		TLSConfig: tlsConfig,
 	}
 
 	return w.Server.ListenAndServeTLS(certFile, certKey)

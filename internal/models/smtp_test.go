@@ -46,6 +46,7 @@ func (suite *SMTPTestSuite) TestUpdateSMTPSettings() {
 		User:     "test",
 		Password: "test",
 		MailFrom: "test@example.com",
+		EncryptionType: "smtps",
 	}
 
 	err := suite.model.UpdateSMTPSettings(&newSettings)

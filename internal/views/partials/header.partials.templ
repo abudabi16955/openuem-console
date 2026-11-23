@@ -275,6 +275,9 @@ templ Header(c echo.Context, breadcrumbs []Breadcrumb, commonInfo *CommonInfo) {
 }
 
 func GetUID(ctx context.Context, sm *sessions.SessionManager) string {
+	if sm == nil || sm.Manager == nil {
+		return "unknown"
+	}
 	uid, ok := sm.Manager.Get(ctx, "uid").(string)
 	if !ok || len(uid) == 0 {
 		return "unknown"
@@ -284,6 +287,9 @@ func GetUID(ctx context.Context, sm *sessions.SessionManager) string {
 }
 
 func GetUsername(ctx context.Context, sm *sessions.SessionManager) string {
+	if sm == nil || sm.Manager == nil {
+		return ""
+	}
 	username, ok := sm.Manager.Get(ctx, "username").(string)
 	if !ok {
 		return ""
@@ -293,6 +299,9 @@ func GetUsername(ctx context.Context, sm *sessions.SessionManager) string {
 }
 
 func GetUserWarnings(ctx context.Context, sm *sessions.SessionManager) string {
+	if sm == nil || sm.Manager == nil {
+		return ""
+	}
 
 	username, ok := sm.Manager.Get(ctx, "username").(string)
 	if !ok {
