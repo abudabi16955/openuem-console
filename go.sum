@@ -8,8 +8,8 @@ github.com/PuerkitoBio/goquery v1.10.3 h1:pFYcNSqHxBD06Fpj/KsbStFRsgRATgnf3LeXiU
 github.com/PuerkitoBio/goquery v1.10.3/go.mod h1:tMUX0zDMHXYlAQk6p35XxQMqMweEKB7iK7iLNd4RH4Y=
 github.com/a-h/templ v0.3.1001 h1:yHDTgexACdJttyiyamcTHXr2QkIeVF1MukLy44EAhMY=
 github.com/a-h/templ v0.3.1001/go.mod h1:oCZcnKRf5jjsGpf2yELzQfodLphd2mwecwG4Crk5HBo=
-github.com/abudabi16955/ent v0.0.0-20261116185824-251d171e1d39 h1:RqjGofHG0ONz6AHAxcgwLnv4+nL/hrtYFBArtn2AJtU=
-github.com/abudabi16955/ent v0.0.0-20261116185824-251d171e1d39/go.mod h1:pnv1dXKu1JK/9XRIPkLBT1Ijxvqe6jDlatIQh6un37o=
+github.com/abudabi16955/ent v0.0.0-20261123063416-7a7e5b960b5a h1:hom5hgL4vftlVEcVsdg4aHSMXetP0Xui3UQ6PefJKQQ=
+github.com/abudabi16955/ent v0.0.0-20261123063416-7a7e5b960b5a/go.mod h1:pnv1dXKu1JK/9XRIPkLBT1Ijxvqe6jDlatIQh6un37o=
 github.com/abudabi16955/nats v0.0.0-20261116164838-d260a216a7f0 h1:pBQ+sVcj0PbN5KEejIM3MNBH0KiT0H7karJp2hux6Tk=
 github.com/abudabi16955/nats v0.0.0-20261116164838-d260a216a7f0/go.mod h1:Q9CHhXcOIRjK5145cNeuHogFQ2BrkgxeaHHQ91UwfSU=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
