@@ -240,34 +240,34 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 				<div class="uk-modal-body flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.name", i18n.Default("Name")) } <span class="text-red-500">*</span></label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.name", i18n.Default("Name")) } <span class="text-red-500">*</span></label>
 							<input type="text" name="name" class="uk-input" placeholder="e.g. Mozilla Firefox" required />
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.version", i18n.Default("Version")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.version", i18n.Default("Version")) }</label>
 							<input type="text" name="version" class="uk-input" placeholder="e.g. 124.0" />
 						</div>
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.category", i18n.Default("Category")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.category", i18n.Default("Category")) }</label>
 							<input type="text" name="category" class="uk-input" placeholder="e.g. Browsers, Utilities" value="General" />
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.icon", i18n.Default("Icon")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.icon", i18n.Default("Icon")) }</label>
 							<input type="text" name="icon" class="uk-input" placeholder="e.g. globe, package, terminal" />
 						</div>
 					</div>
 
 					<div>
-						<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.description", i18n.Default("Description")) }</label>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.description", i18n.Default("Description")) }</label>
 						<textarea name="description" class="uk-textarea" rows="2" placeholder="Brief description of this software package"></textarea>
 					</div>
 
 					<div class="grid grid-cols-3 gap-4">
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.package_type", i18n.Default("Package Type")) } <span class="text-red-500">*</span></label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.package_type", i18n.Default("Package Type")) } <span class="text-red-500">*</span></label>
 							<select name="package_type" class="uk-select">
 								<option value="msi">MSI</option>
 								<option value="exe">EXE</option>
@@ -276,7 +276,7 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 							</select>
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.source_type", i18n.Default("Source Type")) } <span class="text-red-500">*</span></label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.source_type", i18n.Default("Source Type")) } <span class="text-red-500">*</span></label>
 							<select
 								id="new-source-type"
 								name="source_type"
@@ -295,7 +295,7 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 							</select>
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.execution_context", i18n.Default("Execution Context")) } <span class="text-red-500">*</span></label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.execution_context", i18n.Default("Execution Context")) } <span class="text-red-500">*</span></label>
 							<select name="execution_context" class="uk-select">
 								<option value="system">SYSTEM</option>
 								<option value="user">User</option>
@@ -304,29 +304,29 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 					</div>
 
 					<div id="new-file-section" class="flex flex-col gap-1">
-						<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.file", i18n.Default("Installation File")) }</label>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.file", i18n.Default("Installation File")) }</label>
 						<input type="file" name="file" class="uk-input" accept=".msi,.exe,.zip" />
 						<span class="text-xs text-muted-foreground">Supported file types: .msi, .exe, .zip. SHA-256 will be calculated automatically.</span>
 					</div>
 
 					<div id="new-url-section" class="flex flex-col gap-1 hidden">
-						<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.source_url", i18n.Default("Source URL / Winget ID")) }</label>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.source_url", i18n.Default("Source URL / Winget ID")) }</label>
 						<input type="text" name="source_url" class="uk-input" placeholder="https://example.com/installer.msi or Winget Package ID" />
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.silent_args", i18n.Default("Silent Arguments")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.silent_args", i18n.Default("Silent Arguments")) }</label>
 							<input type="text" name="silent_args" class="uk-input font-mono text-xs" placeholder="/quiet /norestart" />
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.checksum", i18n.Default("SHA-256 Checksum")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.checksum", i18n.Default("SHA-256 Checksum")) }</label>
 							<input type="text" name="checksum" class="uk-input font-mono text-xs" placeholder="Optional for upload (auto-computed) or required for HTTPS" />
 						</div>
 					</div>
 
 					<div class="flex items-center gap-2 pt-2">
-						<label class="flex items-center gap-2 text-sm cursor-pointer">
+						<label class="flex items-center gap-2 text-sm cursor-pointer dark:text-white">
 							<input type="checkbox" name="enabled" class="uk-checkbox" checked />
 							<span>{ i18n.T(ctx, "packages.enabled", i18n.Default("Enabled for Self-Service")) }</span>
 						</label>
@@ -371,34 +371,34 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 				<div class="uk-modal-body flex flex-col gap-4 max-h-[70vh] overflow-y-auto text-left">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.name", i18n.Default("Name")) } <span class="text-red-500">*</span></label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.name", i18n.Default("Name")) } <span class="text-red-500">*</span></label>
 							<input type="text" name="name" class="uk-input" value={ pkg.Name } required />
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.version", i18n.Default("Version")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.version", i18n.Default("Version")) }</label>
 							<input type="text" name="version" class="uk-input" value={ pkg.Version } />
 						</div>
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.category", i18n.Default("Category")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.category", i18n.Default("Category")) }</label>
 							<input type="text" name="category" class="uk-input" value={ pkg.Category } />
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.icon", i18n.Default("Icon")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.icon", i18n.Default("Icon")) }</label>
 							<input type="text" name="icon" class="uk-input" value={ pkg.Icon } />
 						</div>
 					</div>
 
 					<div>
-						<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.description", i18n.Default("Description")) }</label>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.description", i18n.Default("Description")) }</label>
 						<textarea name="description" class="uk-textarea" rows="2">{ pkg.Description }</textarea>
 					</div>
 
 					<div class="grid grid-cols-3 gap-4">
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.package_type", i18n.Default("Package Type")) } <span class="text-red-500">*</span></label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.package_type", i18n.Default("Package Type")) } <span class="text-red-500">*</span></label>
 							<select name="package_type" class="uk-select">
 								<option value="msi" selected?={ pkg.PackageType == selfservicepackage.PackageTypeMsi }>MSI</option>
 								<option value="exe" selected?={ pkg.PackageType == selfservicepackage.PackageTypeExe }>EXE</option>
@@ -407,7 +407,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 							</select>
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.source_type", i18n.Default("Source Type")) } <span class="text-red-500">*</span></label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.source_type", i18n.Default("Source Type")) } <span class="text-red-500">*</span></label>
 							<select
 								id={ sourceTypeID }
 								name="source_type"
@@ -426,7 +426,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 							</select>
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.execution_context", i18n.Default("Execution Context")) } <span class="text-red-500">*</span></label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.execution_context", i18n.Default("Execution Context")) } <span class="text-red-500">*</span></label>
 							<select name="execution_context" class="uk-select">
 								<option value="system" selected?={ pkg.ExecutionContext == selfservicepackage.ExecutionContextSystem }>SYSTEM</option>
 								<option value="user" selected?={ pkg.ExecutionContext == selfservicepackage.ExecutionContextUser }>User</option>
@@ -435,7 +435,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 					</div>
 
 					<div id={ fileSecID } class={ "flex flex-col gap-1", templ.KV("hidden", pkg.SourceType != selfservicepackage.SourceTypeUpload) }>
-						<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.file", i18n.Default("Replace Installation File")) }</label>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.file", i18n.Default("Replace Installation File")) }</label>
 						<input type="file" name="file" class="uk-input" accept=".msi,.exe,.zip" />
 						if pkg.FilePath != "" {
 							<span class="text-xs text-muted-foreground">Current file configured. Leave empty to keep existing file.</span>
@@ -443,23 +443,23 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 					</div>
 
 					<div id={ urlSecID } class={ "flex flex-col gap-1", templ.KV("hidden", pkg.SourceType == selfservicepackage.SourceTypeUpload) }>
-						<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.source_url", i18n.Default("Source URL / Winget ID")) }</label>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.source_url", i18n.Default("Source URL / Winget ID")) }</label>
 						<input type="text" name="source_url" class="uk-input" value={ pkg.SourceURL } placeholder="https://example.com/installer.msi" />
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.silent_args", i18n.Default("Silent Arguments")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.silent_args", i18n.Default("Silent Arguments")) }</label>
 							<input type="text" name="silent_args" class="uk-input font-mono text-xs" value={ pkg.SilentArgs } placeholder="/quiet /norestart" />
 						</div>
 						<div>
-							<label class="uk-form-label font-semibold text-xs">{ i18n.T(ctx, "packages.checksum", i18n.Default("SHA-256 Checksum")) }</label>
+							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.checksum", i18n.Default("SHA-256 Checksum")) }</label>
 							<input type="text" name="checksum" class="uk-input font-mono text-xs" value={ pkg.ChecksumSha256 } placeholder="SHA-256" />
 						</div>
 					</div>
 
 					<div class="flex items-center gap-2 pt-2">
-						<label class="flex items-center gap-2 text-sm cursor-pointer">
+						<label class="flex items-center gap-2 text-sm cursor-pointer dark:text-white">
 							<input type="checkbox" name="enabled" class="uk-checkbox" checked?={ pkg.Enabled } />
 							<span>{ i18n.T(ctx, "packages.enabled", i18n.Default("Enabled for Self-Service")) }</span>
 						</label>
@@ -498,8 +498,8 @@ templ DeletePackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.Commo
 					</h3>
 				</div>
 				<div class="uk-modal-body">
-					<p>{ i18n.T(ctx, "packages.confirm_delete", i18n.Default("Are you sure you want to delete this package?")) }</p>
-					<p class="font-bold text-sm mt-2">{ pkg.Name }</p>
+					<p class="dark:text-white">{ i18n.T(ctx, "packages.confirm_delete", i18n.Default("Are you sure you want to delete this package?")) }</p>
+					<p class="font-bold text-sm mt-2 dark:text-white">{ pkg.Name }</p>
 				</div>
 				<div class="uk-modal-footer text-right flex justify-end gap-2">
 					<button class="uk-button uk-button-default uk-modal-close" type="button">{ i18n.T(ctx, "Cancel", i18n.Default("Cancel")) }</button>
