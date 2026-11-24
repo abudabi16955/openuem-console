@@ -68,6 +68,30 @@ func TestResolveIconURL(t *testing.T) {
 	})
 }
 
+func TestGetBrandIcon_DeterministicPriority(t *testing.T) {
+	// "VLC Media Player" contains both "vlc" and "play" (generic)
+	// Brand rule "vlc" must take strict precedence over generic "play" or "video"
+	vlcIcon := GetBrandIcon("vlc")
+	require.NotEmpty(t, vlcIcon)
+	playerIcon := GetBrandIcon("VLC Media Player")
+	assert.Equal(t, vlcIcon, playerIcon, "VLC Media Player should resolve to VLC brand icon, not generic play/video")
+
+	// "Visual Studio Code" contains both "visual studio" / "code"
+	codeIcon := GetBrandIcon("code")
+	require.NotEmpty(t, codeIcon)
+	assert.Equal(t, codeIcon, GetBrandIcon("Visual Studio Code"))
+
+	// "Mozilla Firefox Browser" should resolve to firefox
+	firefoxIcon := GetBrandIcon("firefox")
+	require.NotEmpty(t, firefoxIcon)
+	assert.Equal(t, firefoxIcon, GetBrandIcon("Mozilla Firefox Browser"))
+
+	// "Google Chrome Enterprise" should resolve to chrome
+	chromeIcon := GetBrandIcon("chrome")
+	require.NotEmpty(t, chromeIcon)
+	assert.Equal(t, chromeIcon, GetBrandIcon("Google Chrome Enterprise"))
+}
+
 func TestProcessUploadedIcon(t *testing.T) {
 	t.Run("nil header", func(t *testing.T) {
 		res, err := ProcessUploadedIcon(nil)
@@ -211,28 +235,24 @@ func buildTestPE(t *testing.T, is64Bit bool, iconBytes []byte) []byte {
 func TestExtractIconFromPE_RealPEHeaders(t *testing.T) {
 	pngIcon := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x10\x00\x00\x00\x10\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
 
-	t.Run("PE32 (32-bit) with Resource Directory at offset 112", func(t *testing.T) {
-		peData := buildTestPE(t, false, pngIcon)
+	ttPE := func(t *testing.T, is64Bit bool) {
+		peData := buildTestPE(t, is64Bit, pngIcon)
 		tmpDir := t.TempDir()
-		exePath := filepath.Join(tmpDir, "test32.exe")
+		exePath := filepath.Join(tmpDir, "test.exe")
 		require.NoError(t, os.WriteFile(exePath, peData, 0755))
 
 		iconURI, err := ExtractIconFromPE(exePath)
 		require.NoError(t, err)
 		assert.NotEmpty(t, iconURI)
 		assert.Contains(t, iconURI, "data:image/png;base64,")
+	}
+
+	t.Run("PE32 (32-bit) with Resource Directory at offset 112", func(t *testing.T) {
+		ttPE(t, false)
 	})
 
 	t.Run("PE32+ (64-bit) with Resource Directory at offset 128", func(t *testing.T) {
-		peData := buildTestPE(t, true, pngIcon)
-		tmpDir := t.TempDir()
-		exePath := filepath.Join(tmpDir, "test64.exe")
-		require.NoError(t, os.WriteFile(exePath, peData, 0755))
-
-		iconURI, err := ExtractIconFromPE(exePath)
-		require.NoError(t, err)
-		assert.NotEmpty(t, iconURI)
-		assert.Contains(t, iconURI, "data:image/png;base64,")
+		ttPE(t, true)
 	})
 
 	t.Run("non-PE file", func(t *testing.T) {

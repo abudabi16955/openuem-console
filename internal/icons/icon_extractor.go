@@ -13,52 +13,64 @@ import (
 	"strings"
 )
 
-// brandKeywords maps common application names or keywords to icon identifiers.
-var brandKeywords = map[string]string{
-	"firefox":       "firefox",
-	"mozilla":       "firefox",
-	"chrome":        "chrome",
-	"chromium":      "chrome",
-	"google chrome": "chrome",
-	"edge":          "edge",
-	"msedge":        "edge",
-	"code":          "code",
-	"vscode":        "code",
-	"visual studio": "code",
-	"git":           "git",
-	"github":        "git",
-	"slack":         "slack",
-	"discord":       "discord",
-	"teams":         "teams",
-	"zoom":          "zoom",
-	"vlc":           "vlc",
-	"videolan":      "vlc",
-	"7-zip":         "7zip",
-	"7zip":          "7zip",
-	"winrar":        "archive",
-	"notepad":       "file-text",
-	"notepad++":     "file-text",
-	"docker":        "docker",
-	"libreoffice":   "file-text",
-	"openoffice":    "file-text",
-	"python":        "python",
-	"node":          "node",
-	"nodejs":        "node",
-	"putty":         "terminal",
-	"powershell":    "terminal",
-	"terminal":      "terminal",
-	"spotify":       "spotify",
-	"wireshark":     "activity",
-	"dbeaver":       "database",
-	"pgadmin":       "database",
-	"globe":         "globe",
-	"server":        "server",
-	"archive":       "archive",
-	"video":         "video",
-	"play":          "play",
-	"music":         "music",
-	"database":      "database",
-	"package":       "package",
+type brandRule struct {
+	keyword string
+	target  string
+}
+
+// brandKeywordRules defines an ordered, deterministic priority list of keyword mappings.
+// Specific software brands (Chrome, Firefox, VS Code, Slack, Zoom, VLC, 7-Zip, etc.)
+// always take absolute precedence over generic words (video, terminal, database, etc.).
+var brandKeywordRules = []brandRule{
+	// High-priority specific brands & tools
+	{keyword: "google chrome", target: "chrome"},
+	{keyword: "chromium", target: "chrome"},
+	{keyword: "chrome", target: "chrome"},
+	{keyword: "mozilla firefox", target: "firefox"},
+	{keyword: "firefox", target: "firefox"},
+	{keyword: "mozilla", target: "firefox"},
+	{keyword: "visual studio code", target: "code"},
+	{keyword: "visual studio", target: "code"},
+	{keyword: "vscode", target: "code"},
+	{keyword: "msedge", target: "edge"},
+	{keyword: "edge", target: "edge"},
+	{keyword: "github", target: "git"},
+	{keyword: "git", target: "git"},
+	{keyword: "slack", target: "slack"},
+	{keyword: "discord", target: "discord"},
+	{keyword: "microsoft teams", target: "teams"},
+	{keyword: "teams", target: "teams"},
+	{keyword: "zoom", target: "zoom"},
+	{keyword: "videolan", target: "vlc"},
+	{keyword: "vlc", target: "vlc"},
+	{keyword: "7-zip", target: "7zip"},
+	{keyword: "7zip", target: "7zip"},
+	{keyword: "winrar", target: "archive"},
+	{keyword: "notepad++", target: "file-text"},
+	{keyword: "notepad", target: "file-text"},
+	{keyword: "libreoffice", target: "file-text"},
+	{keyword: "openoffice", target: "file-text"},
+	{keyword: "docker", target: "docker"},
+	{keyword: "python", target: "python"},
+	{keyword: "nodejs", target: "node"},
+	{keyword: "node", target: "node"},
+	{keyword: "spotify", target: "spotify"},
+	{keyword: "wireshark", target: "activity"},
+	{keyword: "dbeaver", target: "database"},
+	{keyword: "pgadmin", target: "database"},
+	{keyword: "putty", target: "terminal"},
+	{keyword: "powershell", target: "terminal"},
+
+	// Lower-priority generic categories & UI icons
+	{keyword: "terminal", target: "terminal"},
+	{keyword: "database", target: "database"},
+	{keyword: "server", target: "server"},
+	{keyword: "archive", target: "archive"},
+	{keyword: "video", target: "video"},
+	{keyword: "play", target: "play"},
+	{keyword: "music", target: "music"},
+	{keyword: "globe", target: "globe"},
+	{keyword: "package", target: "package"},
 }
 
 // brandSVGs contains authentic SVG vector definitions for brands (Simple Icons) and UI icons (Lucide).
@@ -112,10 +124,10 @@ func GetBrandIcon(nameOrBrand string) string {
 		return svgToDataURI(svg)
 	}
 
-	// 2. Keyword match in brandKeywords
-	for keyword, target := range brandKeywords {
-		if strings.Contains(lower, keyword) {
-			if svg, ok := brandSVGs[target]; ok {
+	// 2. Deterministic keyword match in brandKeywordRules
+	for _, rule := range brandKeywordRules {
+		if strings.Contains(lower, rule.keyword) {
+			if svg, ok := brandSVGs[rule.target]; ok {
 				return svgToDataURI(svg)
 			}
 		}
