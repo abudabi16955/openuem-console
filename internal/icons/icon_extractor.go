@@ -197,8 +197,13 @@ func ExtractIconFromPE(filePath string) (string, error) {
 	var rsrcRVA uint32
 	var rsrcSize uint32
 
+	// Resource Directory is DataDirectory[2] in the Optional Header.
+	// Data directories start at offset 96 for PE32 and offset 112 for PE32+.
+	// Each entry is 8 bytes (RVA uint32, Size uint32).
+	// PE32:  Resource Directory is at 96 + 2*8 = 112 (RVA) and 116 (Size).
+	// PE32+: Resource Directory is at 112 + 2*8 = 128 (RVA) and 132 (Size).
 	if optMagic == 0x10b { // PE32
-		if _, err := f.Seek(int64(peOffset)+4+20+96, io.SeekStart); err != nil {
+		if _, err := f.Seek(int64(peOffset)+4+20+112, io.SeekStart); err != nil {
 			return "", err
 		}
 		var rsrcEntry struct {
@@ -211,7 +216,7 @@ func ExtractIconFromPE(filePath string) (string, error) {
 		rsrcRVA = rsrcEntry.RVA
 		rsrcSize = rsrcEntry.Size
 	} else if optMagic == 0x20b { // PE32+ (64-bit)
-		if _, err := f.Seek(int64(peOffset)+4+20+112, io.SeekStart); err != nil {
+		if _, err := f.Seek(int64(peOffset)+4+20+128, io.SeekStart); err != nil {
 			return "", err
 		}
 		var rsrcEntry struct {
@@ -420,42 +425,118 @@ func wrapDIBIntoICO(dib []byte) []byte {
 	return buf.Bytes()
 }
 
+// ExtractIconFromMSI extracts an embedded icon (PNG or ICO) from an MSI package
+// using streaming buffered search with a memory-safe limit (max 64MB scan, 512KB buffer).
 func ExtractIconFromMSI(filePath string) (string, error) {
-	data, err := os.ReadFile(filePath)
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
 	if err != nil {
 		return "", err
 	}
 
-	pngMagic := []byte("\x89PNG\r\n\x1a\n")
-	if idx := bytes.Index(data, pngMagic); idx != -1 {
-		iend := []byte("IEND\xaeB`\x82")
-		if endIdx := bytes.Index(data[idx:], iend); endIdx != -1 {
-			pngData := data[idx : idx+endIdx+len(iend)]
-			if len(pngData) > 64 && len(pngData) < 2*1024*1024 {
-				return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngData), nil
-			}
-		}
+	// Limit scan to 64MB to prevent excessive I/O on huge files
+	maxScan := int64(64 * 1024 * 1024)
+	if fi.Size() < maxScan {
+		maxScan = fi.Size()
 	}
 
+	const chunkSize = 512 * 1024
+	const overlap = 64 // overlap to ensure magic bytes aren't split across chunk boundaries
+	buf := make([]byte, chunkSize)
+
+	pngMagic := []byte("\x89PNG\r\n\x1a\n")
+	iendMagic := []byte("IEND\xaeB`\x82")
 	icoMagic := []byte("\x00\x00\x01\x00")
-	searchIdx := 0
-	for {
-		idx := bytes.Index(data[searchIdx:], icoMagic)
-		if idx == -1 || searchIdx+idx+22 > len(data) {
+
+	var offset int64 = 0
+
+	for offset < maxScan {
+		readSize := chunkSize
+		if offset+int64(readSize) > maxScan {
+			readSize = int(maxScan - offset)
+		}
+		if readSize <= overlap {
 			break
 		}
-		start := searchIdx + idx
-		numImages := binary.LittleEndian.Uint16(data[start+4 : start+6])
-		if numImages >= 1 && numImages <= 16 {
-			bytesInRes := binary.LittleEndian.Uint32(data[start+14 : start+18])
-			imageOffset := binary.LittleEndian.Uint32(data[start+18 : start+22])
-			totalExpected := int(imageOffset) + int(bytesInRes)
-			if imageOffset >= 22 && totalExpected <= len(data)-start && bytesInRes > 64 && bytesInRes < 1024*1024 {
-				icoData := data[start : start+totalExpected]
-				return "data:image/x-icon;base64," + base64.StdEncoding.EncodeToString(icoData), nil
-			}
+
+		n, err := f.ReadAt(buf[:readSize], offset)
+		if n == 0 || (err != nil && err != io.EOF) {
+			break
 		}
-		searchIdx = start + 4
+		currData := buf[:n]
+
+		// 1. Check for PNG in currData
+		searchIdx := 0
+		for {
+			idx := bytes.Index(currData[searchIdx:], pngMagic)
+			if idx == -1 {
+				break
+			}
+			pngStartInChunk := searchIdx + idx
+			absPngStart := offset + int64(pngStartInChunk)
+
+			// Read up to 2MB from absPngStart to find IEND
+			readLimit := int64(2 * 1024 * 1024)
+			if absPngStart+readLimit > fi.Size() {
+				readLimit = fi.Size() - absPngStart
+			}
+
+			if readLimit > 64 {
+				candBuf := make([]byte, readLimit)
+				if nCand, err := f.ReadAt(candBuf, absPngStart); err == nil || err == io.EOF {
+					candData := candBuf[:nCand]
+					if endIdx := bytes.Index(candData, iendMagic); endIdx != -1 {
+						totalLen := endIdx + len(iendMagic)
+						pngData := candData[:totalLen]
+						if len(pngData) > 64 && len(pngData) <= 2*1024*1024 {
+							return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngData), nil
+						}
+					}
+				}
+			}
+			searchIdx = pngStartInChunk + len(pngMagic)
+		}
+
+		// 2. Check for ICO in currData
+		searchIdx = 0
+		for {
+			idx := bytes.Index(currData[searchIdx:], icoMagic)
+			if idx == -1 || searchIdx+idx+22 > len(currData) {
+				break
+			}
+			icoStartInChunk := searchIdx + idx
+			absIcoStart := offset + int64(icoStartInChunk)
+
+			// Read header
+			numImages := binary.LittleEndian.Uint16(currData[icoStartInChunk+4 : icoStartInChunk+6])
+			if numImages >= 1 && numImages <= 16 {
+				bytesInRes := binary.LittleEndian.Uint32(currData[icoStartInChunk+14 : icoStartInChunk+18])
+				imageOffset := binary.LittleEndian.Uint32(currData[icoStartInChunk+18 : icoStartInChunk+22])
+				totalExpected := int(imageOffset) + int(bytesInRes)
+
+				if imageOffset >= 22 && totalExpected <= 2*1024*1024 && bytesInRes > 64 && bytesInRes < 1024*1024 {
+					if absIcoStart+int64(totalExpected) <= fi.Size() {
+						icoBuf := make([]byte, totalExpected)
+						if _, err := f.ReadAt(icoBuf, absIcoStart); err == nil || err == io.EOF {
+							return "data:image/x-icon;base64," + base64.StdEncoding.EncodeToString(icoBuf), nil
+						}
+					}
+				}
+			}
+			searchIdx = icoStartInChunk + 4
+		}
+
+		// Advance offset with overlap
+		advance := int64(n - overlap)
+		if advance <= 0 {
+			break
+		}
+		offset += advance
 	}
 
 	return "", fmt.Errorf("no embedded icon found in MSI")

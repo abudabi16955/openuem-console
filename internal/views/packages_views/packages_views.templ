@@ -227,6 +227,29 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 			</div>
 		</div>
 		@NewPackageModal(commonInfo)
+		<script>
+			function selectPackageIcon(inputId, previewId, iconName, btn) {
+				var input = document.getElementById(inputId);
+				var preview = document.getElementById(previewId);
+				if (input) {
+					input.value = iconName;
+				}
+				if (preview) {
+					preview.innerHTML = '';
+					var ic = document.createElement('uk-icon');
+					ic.setAttribute('icon', iconName);
+					ic.setAttribute('custom-class', 'h-4 w-4 text-primary');
+					ic.setAttribute('uk-cloak', '');
+					preview.appendChild(ic);
+				}
+				if (btn) {
+					var dd = btn.closest('[uk-dropdown]');
+					if (dd && typeof UIkit !== 'undefined') {
+						UIkit.dropdown(dd).hide();
+					}
+				}
+			}
+		</script>
 	</main>
 }
 
@@ -290,7 +313,7 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 													type="button"
 													class="p-1.5 rounded hover:bg-primary/10 hover:text-primary flex items-center justify-center border border-transparent hover:border-primary/20 transition-colors"
 													title={ iconName }
-													onclick={ templ.ComponentScript{Call: fmt.Sprintf("document.getElementById('new-package-icon-input').value = '%s'; document.getElementById('new-package-icon-preview').innerHTML = '<uk-icon icon=\"%s\" custom-class=\"h-4 w-4 text-primary\" uk-cloak></uk-icon>'; UIkit.dropdown(this.closest('[uk-dropdown]')).hide();", iconName, iconName)} }
+													onclick={ templ.ComponentScript{Call: fmt.Sprintf("selectPackageIcon('new-package-icon-input', 'new-package-icon-preview', '%s', this)", iconName)} }
 												>
 													<uk-icon icon={ iconName } custom-class="h-4 w-4" uk-cloak></uk-icon>
 												</button>
@@ -448,7 +471,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 													type="button"
 													class="p-1.5 rounded hover:bg-primary/10 hover:text-primary flex items-center justify-center border border-transparent hover:border-primary/20 transition-colors"
 													title={ iconName }
-													onclick={ templ.ComponentScript{Call: fmt.Sprintf("document.getElementById('%s').value = '%s'; document.getElementById('%s').innerHTML = '<uk-icon icon=\"%s\" custom-class=\"h-4 w-4 text-primary\" uk-cloak></uk-icon>'; UIkit.dropdown(this.closest('[uk-dropdown]')).hide();", iconInputID, iconName, iconPreviewID, iconName)} }
+													onclick={ templ.ComponentScript{Call: fmt.Sprintf("selectPackageIcon('%s', '%s', '%s', this)", iconInputID, iconPreviewID, iconName)} }
 												>
 													<uk-icon icon={ iconName } custom-class="h-4 w-4" uk-cloak></uk-icon>
 												</button>
