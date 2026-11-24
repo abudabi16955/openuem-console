@@ -2,6 +2,8 @@ package packages_views
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/invopop/ctxi18n/i18n"
 	"github.com/labstack/echo/v4"
 	ent "github.com/open-uem/ent"
@@ -10,6 +12,14 @@ import (
 	"github.com/open-uem/openuem-console/internal/views/layout"
 	"github.com/open-uem/openuem-console/internal/views/partials"
 )
+
+var standardIcons = []string{
+	"package", "app-window", "globe", "terminal", "code", "file-text", "folder",
+	"hard-drive", "server", "database", "shield", "shield-check", "lock", "cpu",
+	"tool", "settings", "play", "music", "video", "image", "cloud", "archive",
+	"bookmark", "sparkles", "zap", "check-circle", "activity", "layers", "monitor",
+	"power", "download", "link", "key", "bell", "wifi", "printer",
+}
 
 templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServicePackageFilter, pkgs []*ent.SelfServicePackage, itemsPerPage int, commonInfo *partials.CommonInfo) {
 	@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "SelfService", i18n.Default("Self-Service")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/packages")))}, {Title: i18n.T(ctx, "Packages", i18n.Default("Packages")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/packages")))}}, commonInfo)
@@ -105,7 +115,11 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 										<div class="flex flex-col">
 											<div class="flex items-center gap-2">
 												if pkg.Icon != "" {
-													<uk-icon icon={ pkg.Icon } custom-class="h-4 w-4 text-primary" uk-cloak></uk-icon>
+													if strings.HasPrefix(pkg.Icon, "data:image/") || strings.HasPrefix(pkg.Icon, "http://") || strings.HasPrefix(pkg.Icon, "https://") {
+														<img src={ pkg.Icon } class="h-4 w-4 object-contain inline-block" alt="" />
+													} else {
+														<uk-icon icon={ pkg.Icon } custom-class="h-4 w-4 text-primary" uk-cloak></uk-icon>
+													}
 												} else {
 													<uk-icon icon="package" custom-class="h-4 w-4 text-muted-foreground" uk-cloak></uk-icon>
 												}
@@ -169,14 +183,16 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 									</td>
 									<td class="!align-middle text-right">
 										<div class="flex items-center justify-end gap-2">
-											<a
-												href={ templ.URL(fmt.Sprintf("/api/v1/packages/download/%s", pkg.ID.String())) }
-												title={ i18n.T(ctx, "packages.download", i18n.Default("Download")) }
-												class="uk-button uk-button-small uk-button-default"
-												download
-											>
-												<uk-icon hx-history="false" icon="download" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
-											</a>
+											if pkg.SourceType == selfservicepackage.SourceTypeUpload && pkg.FilePath != "" {
+												<a
+													href={ templ.URL(fmt.Sprintf("/api/v1/packages/download/%s", pkg.ID.String())) }
+													title={ i18n.T(ctx, "packages.download", i18n.Default("Download")) }
+													class="uk-button uk-button-small uk-button-default"
+													download
+												>
+													<uk-icon hx-history="false" icon="download" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
+												</a>
+											}
 											<button
 												type="button"
 												title={ i18n.T(ctx, "packages.edit", i18n.Default("Edit")) }
@@ -211,6 +227,29 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 			</div>
 		</div>
 		@NewPackageModal(commonInfo)
+		<script>
+			function selectPackageIcon(inputId, previewId, iconName, btn) {
+				var input = document.getElementById(inputId);
+				var preview = document.getElementById(previewId);
+				if (input) {
+					input.value = iconName;
+				}
+				if (preview) {
+					preview.innerHTML = '';
+					var ic = document.createElement('uk-icon');
+					ic.setAttribute('icon', iconName);
+					ic.setAttribute('custom-class', 'h-4 w-4 text-primary');
+					ic.setAttribute('uk-cloak', '');
+					preview.appendChild(ic);
+				}
+				if (btn) {
+					var dd = btn.closest('[uk-dropdown]');
+					if (dd && typeof UIkit !== 'undefined') {
+						UIkit.dropdown(dd).hide();
+					}
+				}
+			}
+		</script>
 	</main>
 }
 
@@ -229,7 +268,7 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 				hx-encoding="multipart/form-data"
 				hx-target="#main"
 				hx-swap="outerHTML"
-				_="on htmx:afterRequest if event.detail.successful UIkit.modal('#new-package-modal').hide()"
+				hx-on::after-request="if (event.detail.successful) UIkit.modal('#new-package-modal').hide()"
 			>
 				<div class="uk-modal-header">
 					<h3 class="uk-modal-title dark:text-white flex items-center gap-2">
@@ -254,9 +293,39 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.category", i18n.Default("Category")) }</label>
 							<input type="text" name="category" class="uk-input" placeholder="e.g. Browsers, Utilities" value="General" />
 						</div>
-						<div>
+						<div class="flex flex-col gap-1">
 							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.icon", i18n.Default("Icon")) }</label>
-							<input type="text" name="icon" class="uk-input" placeholder="e.g. globe, package, terminal" />
+							<div class="flex items-center gap-2">
+								<div id="new-package-icon-preview" class="w-9 h-9 border border-border rounded flex items-center justify-center bg-muted/20 flex-shrink-0">
+									<uk-icon icon="package" custom-class="h-4 w-4 text-primary" uk-cloak></uk-icon>
+								</div>
+								<input type="text" id="new-package-icon-input" name="icon" class="uk-input text-xs" placeholder="Icon name (e.g. package, globe)" />
+								<div class="uk-inline flex-shrink-0">
+									<button class="uk-button uk-button-default text-xs px-2 flex items-center gap-1" type="button">
+										<uk-icon icon="grid" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
+										<span>{ i18n.T(ctx, "packages.pick", i18n.Default("Pick")) }</span>
+									</button>
+									<div uk-dropdown="mode: click; pos: bottom-right" class="w-64 p-3 bg-white dark:bg-gray-800 shadow-xl rounded-md border border-border z-50">
+										<div class="text-xs font-semibold mb-2 text-muted-foreground">{ i18n.T(ctx, "packages.select_icon", i18n.Default("Select Icon")) }</div>
+										<div class="grid grid-cols-6 gap-2 max-h-40 overflow-y-auto p-1">
+											for _, iconName := range standardIcons {
+												<button
+													type="button"
+													class="p-1.5 rounded hover:bg-primary/10 hover:text-primary flex items-center justify-center border border-transparent hover:border-primary/20 transition-colors"
+													title={ iconName }
+													onclick={ templ.ComponentScript{Call: fmt.Sprintf("selectPackageIcon('new-package-icon-input', 'new-package-icon-preview', '%s', this)", iconName)} }
+												>
+													<uk-icon icon={ iconName } custom-class="h-4 w-4" uk-cloak></uk-icon>
+												</button>
+											}
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="mt-1">
+								<label class="text-[11px] text-muted-foreground block mb-0.5">{ i18n.T(ctx, "packages.upload_icon", i18n.Default("Or upload custom icon (PNG, ICO, SVG, max 2MB)")) }</label>
+								<input type="file" name="icon_file" accept=".png,.ico,.svg,.jpg,.jpeg,.webp" class="uk-input text-xs" />
+							</div>
 						</div>
 					</div>
 
@@ -281,14 +350,7 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 								id="new-source-type"
 								name="source_type"
 								class="uk-select"
-								_="on change
-									if my.value is 'upload'
-										remove .hidden from #new-file-section
-										add .hidden to #new-url-section
-									else
-										add .hidden to #new-file-section
-										remove .hidden from #new-url-section
-									end"
+								onchange="if (this.value === 'upload') { document.getElementById('new-file-section').classList.remove('hidden'); document.getElementById('new-url-section').classList.add('hidden'); } else { document.getElementById('new-file-section').classList.add('hidden'); document.getElementById('new-url-section').classList.remove('hidden'); }"
 							>
 								<option value="upload">{ i18n.T(ctx, "packages.upload", i18n.Default("Upload")) }</option>
 								<option value="https">{ i18n.T(ctx, "packages.https", i18n.Default("HTTPS")) }</option>
@@ -306,7 +368,7 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 					<div id="new-file-section" class="flex flex-col gap-1">
 						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.file", i18n.Default("Installation File")) }</label>
 						<input type="file" name="file" class="uk-input" accept=".msi,.exe,.zip" />
-						<span class="text-xs text-muted-foreground">Supported file types: .msi, .exe, .zip. SHA-256 will be calculated automatically.</span>
+						<span class="text-xs text-muted-foreground">Supported file types: .msi, .exe, .zip. SHA-256 will be calculated automatically by server.</span>
 					</div>
 
 					<div id="new-url-section" class="flex flex-col gap-1 hidden">
@@ -314,15 +376,9 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 						<input type="text" name="source_url" class="uk-input" placeholder="https://example.com/installer.msi or Winget Package ID" />
 					</div>
 
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.silent_args", i18n.Default("Silent Arguments")) }</label>
-							<input type="text" name="silent_args" class="uk-input font-mono text-xs" placeholder="/quiet /norestart" />
-						</div>
-						<div>
-							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.checksum", i18n.Default("SHA-256 Checksum")) }</label>
-							<input type="text" name="checksum" class="uk-input font-mono text-xs" placeholder="Optional for upload (auto-computed) or required for HTTPS" />
-						</div>
+					<div>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.silent_args", i18n.Default("Silent Arguments")) }</label>
+						<input type="text" name="silent_args" class="uk-input font-mono text-xs" placeholder="/quiet /norestart" />
 					</div>
 
 					<div class="flex items-center gap-2 pt-2">
@@ -350,6 +406,8 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 		sourceTypeID := fmt.Sprintf("edit-source-type-%s", pkg.ID.String())
 		fileSecID := fmt.Sprintf("edit-file-section-%s", pkg.ID.String())
 		urlSecID := fmt.Sprintf("edit-url-section-%s", pkg.ID.String())
+		iconInputID := fmt.Sprintf("edit-package-icon-input-%s", pkg.ID.String())
+		iconPreviewID := fmt.Sprintf("edit-package-icon-preview-%s", pkg.ID.String())
 	}}
 	<div id={ modalID } uk-modal>
 		<div class="uk-modal-dialog uk-margin-auto-vertical w-2/3">
@@ -359,16 +417,16 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 				hx-encoding="multipart/form-data"
 				hx-target="#main"
 				hx-swap="outerHTML"
-				_={ fmt.Sprintf("on htmx:afterRequest if event.detail.successful UIkit.modal('#%s').hide()", modalID) }
+				hx-on::after-request={ templ.ComponentScript{Call: fmt.Sprintf("if (event.detail.successful) UIkit.modal('#%s').hide()", modalID)} }
 			>
 				<input type="hidden" name="id" value={ pkg.ID.String() } />
 				<div class="uk-modal-header">
 					<h3 class="uk-modal-title dark:text-white flex items-center gap-2">
 						<uk-icon icon="pencil" custom-class="h-5 w-5 text-primary" uk-cloak></uk-icon>
-						<span>{ i18n.T(ctx, "packages.edit", i18n.Default("Edit Package")) }: { pkg.Name }</span>
+						<span>{ i18n.T(ctx, "packages.edit", i18n.Default("Edit Package")) }</span>
 					</h3>
 				</div>
-				<div class="uk-modal-body flex flex-col gap-4 max-h-[70vh] overflow-y-auto text-left">
+				<div class="uk-modal-body flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.name", i18n.Default("Name")) } <span class="text-red-500">*</span></label>
@@ -385,9 +443,47 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.category", i18n.Default("Category")) }</label>
 							<input type="text" name="category" class="uk-input" value={ pkg.Category } />
 						</div>
-						<div>
+						<div class="flex flex-col gap-1">
 							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.icon", i18n.Default("Icon")) }</label>
-							<input type="text" name="icon" class="uk-input" value={ pkg.Icon } />
+							<div class="flex items-center gap-2">
+								<div id={ iconPreviewID } class="w-9 h-9 border border-border rounded flex items-center justify-center bg-muted/20 flex-shrink-0">
+									if pkg.Icon != "" {
+										if strings.HasPrefix(pkg.Icon, "data:image/") || strings.HasPrefix(pkg.Icon, "http://") || strings.HasPrefix(pkg.Icon, "https://") {
+											<img src={ pkg.Icon } class="h-4 w-4 object-contain inline-block" alt="" />
+										} else {
+											<uk-icon icon={ pkg.Icon } custom-class="h-4 w-4 text-primary" uk-cloak></uk-icon>
+										}
+									} else {
+										<uk-icon icon="package" custom-class="h-4 w-4 text-muted-foreground" uk-cloak></uk-icon>
+									}
+								</div>
+								<input type="text" id={ iconInputID } name="icon" class="uk-input text-xs" value={ pkg.Icon } />
+								<div class="uk-inline flex-shrink-0">
+									<button class="uk-button uk-button-default text-xs px-2 flex items-center gap-1" type="button">
+										<uk-icon icon="grid" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
+										<span>{ i18n.T(ctx, "packages.pick", i18n.Default("Pick")) }</span>
+									</button>
+									<div uk-dropdown="mode: click; pos: bottom-right" class="w-64 p-3 bg-white dark:bg-gray-800 shadow-xl rounded-md border border-border z-50">
+										<div class="text-xs font-semibold mb-2 text-muted-foreground">{ i18n.T(ctx, "packages.select_icon", i18n.Default("Select Icon")) }</div>
+										<div class="grid grid-cols-6 gap-2 max-h-40 overflow-y-auto p-1">
+											for _, iconName := range standardIcons {
+												<button
+													type="button"
+													class="p-1.5 rounded hover:bg-primary/10 hover:text-primary flex items-center justify-center border border-transparent hover:border-primary/20 transition-colors"
+													title={ iconName }
+													onclick={ templ.ComponentScript{Call: fmt.Sprintf("selectPackageIcon('%s', '%s', '%s', this)", iconInputID, iconPreviewID, iconName)} }
+												>
+													<uk-icon icon={ iconName } custom-class="h-4 w-4" uk-cloak></uk-icon>
+												</button>
+											}
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="mt-1">
+								<label class="text-[11px] text-muted-foreground block mb-0.5">{ i18n.T(ctx, "packages.upload_icon", i18n.Default("Or upload custom icon (PNG, ICO, SVG, max 2MB)")) }</label>
+								<input type="file" name="icon_file" accept=".png,.ico,.svg,.jpg,.jpeg,.webp" class="uk-input text-xs" />
+							</div>
 						</div>
 					</div>
 
@@ -412,14 +508,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 								id={ sourceTypeID }
 								name="source_type"
 								class="uk-select"
-								_={ fmt.Sprintf(`on change
-									if my.value is 'upload'
-										remove .hidden from #%s
-										add .hidden to #%s
-									else
-										add .hidden to #%s
-										remove .hidden from #%s
-									end`, fileSecID, urlSecID, fileSecID, urlSecID) }
+								onchange={ templ.ComponentScript{Call: fmt.Sprintf("if (this.value === 'upload') { document.getElementById('%s').classList.remove('hidden'); document.getElementById('%s').classList.add('hidden'); } else { document.getElementById('%s').classList.add('hidden'); document.getElementById('%s').classList.remove('hidden'); }", fileSecID, urlSecID, fileSecID, urlSecID)} }
 							>
 								<option value="upload" selected?={ pkg.SourceType == selfservicepackage.SourceTypeUpload }>{ i18n.T(ctx, "packages.upload", i18n.Default("Upload")) }</option>
 								<option value="https" selected?={ pkg.SourceType == selfservicepackage.SourceTypeHTTPS }>{ i18n.T(ctx, "packages.https", i18n.Default("HTTPS")) }</option>
@@ -438,7 +527,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.file", i18n.Default("Replace Installation File")) }</label>
 						<input type="file" name="file" class="uk-input" accept=".msi,.exe,.zip" />
 						if pkg.FilePath != "" {
-							<span class="text-xs text-muted-foreground">Current file configured. Leave empty to keep existing file.</span>
+							<span class="text-xs text-muted-foreground">Current file configured. Leave empty to keep existing file. SHA-256 is auto-calculated on upload.</span>
 						}
 					</div>
 
@@ -447,15 +536,9 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 						<input type="text" name="source_url" class="uk-input" value={ pkg.SourceURL } placeholder="https://example.com/installer.msi" />
 					</div>
 
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.silent_args", i18n.Default("Silent Arguments")) }</label>
-							<input type="text" name="silent_args" class="uk-input font-mono text-xs" value={ pkg.SilentArgs } placeholder="/quiet /norestart" />
-						</div>
-						<div>
-							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.checksum", i18n.Default("SHA-256 Checksum")) }</label>
-							<input type="text" name="checksum" class="uk-input font-mono text-xs" value={ pkg.ChecksumSha256 } placeholder="SHA-256" />
-						</div>
+					<div>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.silent_args", i18n.Default("Silent Arguments")) }</label>
+						<input type="text" name="silent_args" class="uk-input font-mono text-xs" value={ pkg.SilentArgs } placeholder="/quiet /norestart" />
 					</div>
 
 					<div class="flex items-center gap-2 pt-2">
@@ -488,7 +571,7 @@ templ DeletePackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.Commo
 				hx-delete={ string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/packages/%s", pkg.ID.String())))) }
 				hx-target="#main"
 				hx-swap="outerHTML"
-				_={ fmt.Sprintf("on htmx:afterRequest if event.detail.successful UIkit.modal('#%s').hide()", modalID) }
+				hx-on::after-request={ templ.ComponentScript{Call: fmt.Sprintf("if (event.detail.successful) UIkit.modal('#%s').hide()", modalID)} }
 			>
 				<input type="hidden" name="id" value={ pkg.ID.String() } />
 				<div class="uk-modal-header">

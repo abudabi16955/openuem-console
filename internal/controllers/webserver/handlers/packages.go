@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/open-uem/ent/selfservicepackage"
+	"github.com/open-uem/openuem-console/internal/icons"
 	"github.com/open-uem/openuem-console/internal/views/filters"
 	"github.com/open-uem/openuem-console/internal/views/packages_views"
 	"github.com/open-uem/openuem-console/internal/views/partials"
@@ -25,9 +26,10 @@ import (
 )
 
 type SelfServiceNotification struct {
-	Action    string    `json:"action"`
-	PackageID string    `json:"package_id,omitempty"`
-	Timestamp time.Time `json:"timestamp"`
+	Action     string    `json:"action"`
+	PackageID  string    `json:"package_id,omitempty"`
+	ConsoleURL string    `json:"console_url,omitempty"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 func (h *Handler) getPackagesDir() string {
@@ -40,14 +42,34 @@ func (h *Handler) getPackagesDir() string {
 	return dir
 }
 
+func (h *Handler) getConsoleURL() string {
+	if h.ReverseProxyServer != "" {
+		url := h.ReverseProxyServer
+		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+			url = "https://" + url
+		}
+		return strings.TrimSuffix(url, "/")
+	}
+	server := h.ServerName
+	if server == "" {
+		server = "localhost"
+	}
+	port := h.ConsolePort
+	if port == "" {
+		port = "8080"
+	}
+	return fmt.Sprintf("https://%s:%s", server, port)
+}
+
 func (h *Handler) notifySelfServiceUpdate(action string, packageID string) {
 	if h.NATSConnection == nil || !h.NATSConnection.IsConnected() {
 		return
 	}
 	msg := SelfServiceNotification{
-		Action:    action,
-		PackageID: packageID,
-		Timestamp: time.Now().UTC(),
+		Action:     action,
+		PackageID:  packageID,
+		ConsoleURL: h.getConsoleURL(),
+		Timestamp:  time.Now().UTC(),
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -228,18 +250,23 @@ func (h *Handler) SavePackage(c echo.Context) error {
 			return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not write package file: %v", err), false))
 		}
 
+		// Checksum is 100% computed by server after upload
 		calcChecksum := hex.EncodeToString(hasher.Sum(nil))
-		if checksum != "" && !strings.EqualFold(checksum, calcChecksum) {
-			os.Remove(destPath)
-			return RenderError(c, partials.ErrorMessage("Provided SHA-256 checksum does not match uploaded file", false))
-		}
-
 		filePath = destPath
 		checksum = calcChecksum
 	} else if sourceType == selfservicepackage.SourceTypeHTTPS {
 		if pkgType != selfservicepackage.PackageTypeWinget && sourceURL == "" {
 			return RenderError(c, partials.ErrorMessage("Source URL is required for HTTPS source type", false))
 		}
+	}
+
+	// Process uploaded custom icon or auto-extract icon
+	if iconFile, err := c.FormFile("icon_file"); err == nil && iconFile != nil {
+		if uploadedIcon, err := icons.ProcessUploadedIcon(iconFile); err == nil && uploadedIcon != "" {
+			icon = uploadedIcon
+		}
+	} else if icon == "" {
+		icon = icons.ExtractIcon(name, filePath)
 	}
 
 	createdPkg, err := h.Model.CreateSelfServicePackage(
@@ -267,7 +294,12 @@ func (h *Handler) SavePackage(c echo.Context) error {
 
 	h.notifySelfServiceUpdate("create", createdPkg.ID.String())
 
-	return h.Packages(c)
+	redirectURL := "/packages"
+	if commonInfo, err := h.GetCommonInfo(c); err == nil && commonInfo != nil {
+		redirectURL = partials.GetNavigationUrl(commonInfo, "/packages")
+	}
+	c.Response().Header().Set("HX-Redirect", redirectURL)
+	return c.String(http.StatusOK, "")
 }
 
 func (h *Handler) UpdatePackage(c echo.Context) error {
@@ -365,18 +397,27 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 			return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not write package file: %v", err), false))
 		}
 
+		// Compute sha256 100% on server
 		calcChecksum := hex.EncodeToString(hasher.Sum(nil))
-		if checksum != "" && !strings.EqualFold(checksum, calcChecksum) {
-			os.Remove(destPath)
-			return RenderError(c, partials.ErrorMessage("Provided SHA-256 checksum does not match uploaded file", false))
-		}
-
 		if existingPkg.FilePath != "" && existingPkg.FilePath != destPath {
 			_ = os.Remove(existingPkg.FilePath)
 		}
 
 		filePath = destPath
 		checksum = calcChecksum
+	}
+
+	// Process uploaded custom icon or auto-extract
+	if iconFile, err := c.FormFile("icon_file"); err == nil && iconFile != nil {
+		if uploadedIcon, err := icons.ProcessUploadedIcon(iconFile); err == nil && uploadedIcon != "" {
+			icon = uploadedIcon
+		}
+	} else if icon == "" {
+		if existingPkg.Icon != "" {
+			icon = existingPkg.Icon
+		} else {
+			icon = icons.ExtractIcon(name, filePath)
+		}
 	}
 
 	_, err = h.Model.UpdateSelfServicePackage(
@@ -402,7 +443,12 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 
 	h.notifySelfServiceUpdate("update", pkgID.String())
 
-	return h.Packages(c)
+	redirectURL := "/packages"
+	if commonInfo, err := h.GetCommonInfo(c); err == nil && commonInfo != nil {
+		redirectURL = partials.GetNavigationUrl(commonInfo, "/packages")
+	}
+	c.Response().Header().Set("HX-Redirect", redirectURL)
+	return c.String(http.StatusOK, "")
 }
 
 func (h *Handler) DeletePackage(c echo.Context) error {
@@ -429,7 +475,12 @@ func (h *Handler) DeletePackage(c echo.Context) error {
 
 	h.notifySelfServiceUpdate("delete", pkgID.String())
 
-	return h.Packages(c)
+	redirectURL := "/packages"
+	if commonInfo, err := h.GetCommonInfo(c); err == nil && commonInfo != nil {
+		redirectURL = partials.GetNavigationUrl(commonInfo, "/packages")
+	}
+	c.Response().Header().Set("HX-Redirect", redirectURL)
+	return c.String(http.StatusOK, "")
 }
 
 func (h *Handler) DownloadPackage(c echo.Context) error {
@@ -479,7 +530,7 @@ func (h *Handler) APIGetPackages(c echo.Context) error {
 
 	pkgs, err := h.Model.GetAllSelfServicePackages(c.Request().Context())
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Could not retrieve packages: %v", err))
 	}
 
 	type PackageResponse struct {
@@ -495,6 +546,7 @@ func (h *Handler) APIGetPackages(c echo.Context) error {
 		ExecutionContext string    `json:"execution_context"`
 		SilentArgs       string    `json:"silent_args,omitempty"`
 		Icon             string    `json:"icon,omitempty"`
+		IconURL          string    `json:"icon_url,omitempty"`
 		Enabled          bool      `json:"enabled"`
 		DownloadURL      string    `json:"download_url"`
 		UpdatedAt        time.Time `json:"updated_at"`
@@ -518,6 +570,7 @@ func (h *Handler) APIGetPackages(c echo.Context) error {
 			ExecutionContext: p.ExecutionContext.String(),
 			SilentArgs:       p.SilentArgs,
 			Icon:             p.Icon,
+			IconURL:          p.Icon,
 			Enabled:          p.Enabled,
 			DownloadURL:      fmt.Sprintf("/api/v1/packages/download/%s", p.ID.String()),
 			UpdatedAt:        p.UpdatedAt,
