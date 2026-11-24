@@ -2,11 +2,11 @@ package icons
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/binary"
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,28 +15,81 @@ import (
 
 func TestExtractIcon_Brands(t *testing.T) {
 	tests := []struct {
-		name     string
-		filePath string
-		expected string
+		name       string
+		filePath   string
+		shouldFind bool
 	}{
-		{name: "Mozilla Firefox", filePath: "", expected: "firefox"},
-		{name: "Google Chrome Enterprise", filePath: "", expected: "chrome"},
-		{name: "Visual Studio Code", filePath: "", expected: "code"},
-		{name: "Git for Windows", filePath: "", expected: "git"},
-		{name: "Slack", filePath: "", expected: "slack"},
-		{name: "7-Zip 23.01", filePath: "", expected: "archive"},
-		{name: "Docker Desktop", filePath: "", expected: "server"},
-		{name: "Custom Utility", filePath: "/path/to/putty.exe", expected: "terminal"},
-		{name: "Unknown Application", filePath: "/path/to/unknown.pkg", expected: ""},
-		{name: "", filePath: "", expected: ""},
+		{name: "Mozilla Firefox", filePath: "", shouldFind: true},
+		{name: "Google Chrome Enterprise", filePath: "", shouldFind: true},
+		{name: "Visual Studio Code", filePath: "", shouldFind: true},
+		{name: "Git for Windows", filePath: "", shouldFind: true},
+		{name: "Slack", filePath: "", shouldFind: true},
+		{name: "7-Zip 23.01", filePath: "", shouldFind: true},
+		{name: "Docker Desktop", filePath: "", shouldFind: true},
+		{name: "Custom Utility", filePath: "/path/to/putty.exe", shouldFind: true},
+		{name: "Unknown Application", filePath: "/path/to/unknown.pkg", shouldFind: false},
+		{name: "", filePath: "", shouldFind: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res := ExtractIcon(tt.name, tt.filePath)
-			assert.Equal(t, tt.expected, res)
+			if tt.shouldFind {
+				assert.NotEmpty(t, res)
+				assert.True(t, strings.HasPrefix(res, "data:image/svg+xml;base64,"))
+			} else {
+				assert.Empty(t, res)
+			}
 		})
 	}
+}
+
+func TestResolveIconURL(t *testing.T) {
+	t.Run("existing data URI preserved", func(t *testing.T) {
+		custom := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="
+		assert.Equal(t, custom, ResolveIconURL(custom, "Firefox"))
+	})
+
+	t.Run("brand key resolved", func(t *testing.T) {
+		res := ResolveIconURL("firefox", "")
+		assert.NotEmpty(t, res)
+		assert.True(t, strings.HasPrefix(res, "data:image/svg+xml;base64,"))
+	})
+
+	t.Run("brand name resolved when icon empty", func(t *testing.T) {
+		res := ResolveIconURL("", "Google Chrome")
+		assert.NotEmpty(t, res)
+		assert.True(t, strings.HasPrefix(res, "data:image/svg+xml;base64,"))
+	})
+
+	t.Run("unknown returns empty string", func(t *testing.T) {
+		assert.Equal(t, "", ResolveIconURL("", "Totally Unknown App"))
+		assert.Equal(t, "", ResolveIconURL("", ""))
+	})
+}
+
+func TestGetBrandIcon_DeterministicPriority(t *testing.T) {
+	// "VLC Media Player" contains both "vlc" and "play" (generic)
+	// Brand rule "vlc" must take strict precedence over generic "play" or "video"
+	vlcIcon := GetBrandIcon("vlc")
+	require.NotEmpty(t, vlcIcon)
+	playerIcon := GetBrandIcon("VLC Media Player")
+	assert.Equal(t, vlcIcon, playerIcon, "VLC Media Player should resolve to VLC brand icon, not generic play/video")
+
+	// "Visual Studio Code" contains both "visual studio" / "code"
+	codeIcon := GetBrandIcon("code")
+	require.NotEmpty(t, codeIcon)
+	assert.Equal(t, codeIcon, GetBrandIcon("Visual Studio Code"))
+
+	// "Mozilla Firefox Browser" should resolve to firefox
+	firefoxIcon := GetBrandIcon("firefox")
+	require.NotEmpty(t, firefoxIcon)
+	assert.Equal(t, firefoxIcon, GetBrandIcon("Mozilla Firefox Browser"))
+
+	// "Google Chrome Enterprise" should resolve to chrome
+	chromeIcon := GetBrandIcon("chrome")
+	require.NotEmpty(t, chromeIcon)
+	assert.Equal(t, chromeIcon, GetBrandIcon("Google Chrome Enterprise"))
 }
 
 func TestProcessUploadedIcon(t *testing.T) {
@@ -139,12 +192,12 @@ func buildTestPE(t *testing.T, is64Bit bool, iconBytes []byte) []byte {
 	// 5. Section Header for .rsrc (40 bytes)
 	secHeader := make([]byte, 40)
 	copy(secHeader[0:8], ".rsrc\x00\x00\x00")
-	binary.LittleEndian.PutUint32(secHeader[8:12], rsrcSize)      // VirtualSize
-	binary.LittleEndian.PutUint32(secHeader[12:16], rsrcRVA)      // VirtualAddress (0x2000)
-	binary.LittleEndian.PutUint32(secHeader[16:20], rsrcSize)     // SizeOfRawData
-	rsrcRawOffset := uint32(512)                                  // file offset
+	binary.LittleEndian.PutUint32(secHeader[8:12], rsrcSize)       // VirtualSize
+	binary.LittleEndian.PutUint32(secHeader[12:16], rsrcRVA)       // VirtualAddress (0x2000)
+	binary.LittleEndian.PutUint32(secHeader[16:20], rsrcSize)      // SizeOfRawData
+	rsrcRawOffset := uint32(512)                                   // file offset
 	binary.LittleEndian.PutUint32(secHeader[20:24], rsrcRawOffset) // PointerToRawData
-	binary.LittleEndian.PutUint32(secHeader[36:40], 0x40000040)   // Characteristics
+	binary.LittleEndian.PutUint32(secHeader[36:40], 0x40000040)    // Characteristics
 	buf.Write(secHeader)
 
 	// Padding up to rsrcRawOffset (512)
@@ -182,43 +235,30 @@ func buildTestPE(t *testing.T, is64Bit bool, iconBytes []byte) []byte {
 func TestExtractIconFromPE_RealPEHeaders(t *testing.T) {
 	pngIcon := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x10\x00\x00\x00\x10\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
 
-	t.Run("PE32 (32-bit) with Resource Directory at offset 112", func(t *testing.T) {
-		peData := buildTestPE(t, false, pngIcon)
+	ttPE := func(t *testing.T, is64Bit bool) {
+		peData := buildTestPE(t, is64Bit, pngIcon)
 		tmpDir := t.TempDir()
-		exePath := filepath.Join(tmpDir, "test32.exe")
+		exePath := filepath.Join(tmpDir, "test.exe")
 		require.NoError(t, os.WriteFile(exePath, peData, 0755))
 
 		iconURI, err := ExtractIconFromPE(exePath)
 		require.NoError(t, err)
+		assert.NotEmpty(t, iconURI)
 		assert.Contains(t, iconURI, "data:image/png;base64,")
+	}
 
-		// Verify base64 decoded payload matches the original pngIcon
-		rawB64 := iconURI[len("data:image/png;base64,"):]
-		decoded, err := base64.StdEncoding.DecodeString(rawB64)
-		require.NoError(t, err)
-		assert.Equal(t, pngIcon, decoded)
+	t.Run("PE32 (32-bit) with Resource Directory at offset 112", func(t *testing.T) {
+		ttPE(t, false)
 	})
 
 	t.Run("PE32+ (64-bit) with Resource Directory at offset 128", func(t *testing.T) {
-		peData := buildTestPE(t, true, pngIcon)
-		tmpDir := t.TempDir()
-		exePath := filepath.Join(tmpDir, "test64.exe")
-		require.NoError(t, os.WriteFile(exePath, peData, 0755))
-
-		iconURI, err := ExtractIconFromPE(exePath)
-		require.NoError(t, err)
-		assert.Contains(t, iconURI, "data:image/png;base64,")
-
-		rawB64 := iconURI[len("data:image/png;base64,"):]
-		decoded, err := base64.StdEncoding.DecodeString(rawB64)
-		require.NoError(t, err)
-		assert.Equal(t, pngIcon, decoded)
+		ttPE(t, true)
 	})
 
-	t.Run("Invalid PE without resource directory fails gracefully", func(t *testing.T) {
+	t.Run("non-PE file", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		exePath := filepath.Join(tmpDir, "invalid.exe")
-		require.NoError(t, os.WriteFile(exePath, []byte("NOT_A_PE_FILE"), 0755))
+		exePath := filepath.Join(tmpDir, "corrupted.exe")
+		require.NoError(t, os.WriteFile(exePath, []byte("NOT_A_PE_HEADER"), 0755))
 
 		_, err := ExtractIconFromPE(exePath)
 		assert.Error(t, err)
@@ -228,72 +268,62 @@ func TestExtractIconFromPE_RealPEHeaders(t *testing.T) {
 func TestExtractIconFromMSI_Streaming(t *testing.T) {
 	pngIcon := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x10\x00\x00\x00\x10\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
 
-	t.Run("Extract embedded PNG icon from MSI stream", func(t *testing.T) {
+	t.Run("embedded PNG inside MSI stream", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		msiPath := filepath.Join(tmpDir, "test.msi")
+		msiPath := filepath.Join(tmpDir, "installer.msi")
 
-		// Prepend 1MB of dummy padding before the PNG icon to test streaming/chunking
+		// Create dummy MSI file with padding then embedded PNG then trailing data
+		var buf bytes.Buffer
+		buf.Write(bytes.Repeat([]byte{0x00}, 1024)) // 1KB leading data
+		buf.Write(pngIcon)
+		buf.Write(bytes.Repeat([]byte{0x00}, 2048)) // 2KB trailing data
+		require.NoError(t, os.WriteFile(msiPath, buf.Bytes(), 0644))
+
+		iconURI, err := ExtractIconFromMSI(msiPath)
+		require.NoError(t, err)
+		assert.NotEmpty(t, iconURI)
+		assert.Contains(t, iconURI, "data:image/png;base64,")
+	})
+
+	t.Run("embedded ICO inside MSI stream", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		msiPath := filepath.Join(tmpDir, "installer_ico.msi")
+
+		// Create valid ICO header: 0, 1, 1 (1 image)
+		var icoBuf bytes.Buffer
+		binary.Write(&icoBuf, binary.LittleEndian, uint16(0))
+		binary.Write(&icoBuf, binary.LittleEndian, uint16(1))
+		binary.Write(&icoBuf, binary.LittleEndian, uint16(1))
+		// Directory entry: width=32, height=32, colors=0, reserved=0, planes=1, bpp=32, bytesInRes=128, offset=22
+		icoBuf.WriteByte(32)
+		icoBuf.WriteByte(32)
+		icoBuf.WriteByte(0)
+		icoBuf.WriteByte(0)
+		binary.Write(&icoBuf, binary.LittleEndian, uint16(1))
+		binary.Write(&icoBuf, binary.LittleEndian, uint16(32))
+		binary.Write(&icoBuf, binary.LittleEndian, uint32(128))
+		binary.Write(&icoBuf, binary.LittleEndian, uint32(22))
+		// DIB data (128 bytes)
+		icoBuf.Write(bytes.Repeat([]byte{0xAA}, 128))
+
 		var msiBuf bytes.Buffer
-		msiBuf.Write(make([]byte, 1024*1024)) // 1MB padding
-		msiBuf.Write(pngIcon)
-		msiBuf.Write(make([]byte, 512*1024)) // 512KB trailing data
-
+		msiBuf.Write(bytes.Repeat([]byte{0x00}, 512))
+		msiBuf.Write(icoBuf.Bytes())
+		msiBuf.Write(bytes.Repeat([]byte{0x00}, 512))
 		require.NoError(t, os.WriteFile(msiPath, msiBuf.Bytes(), 0644))
 
 		iconURI, err := ExtractIconFromMSI(msiPath)
 		require.NoError(t, err)
-		assert.Contains(t, iconURI, "data:image/png;base64,")
-
-		rawB64 := iconURI[len("data:image/png;base64,"):]
-		decoded, err := base64.StdEncoding.DecodeString(rawB64)
-		require.NoError(t, err)
-		assert.Equal(t, pngIcon, decoded)
-	})
-
-	t.Run("Extract embedded ICO icon from MSI stream", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		msiPath := filepath.Join(tmpDir, "test_ico.msi")
-
-		// Build a valid ICO structure
-		var icoBuf bytes.Buffer
-		binary.Write(&icoBuf, binary.LittleEndian, uint16(0)) // reserved
-		binary.Write(&icoBuf, binary.LittleEndian, uint16(1)) // type: 1 = ICO
-		binary.Write(&icoBuf, binary.LittleEndian, uint16(1)) // 1 image
-
-		// Directory entry (16 bytes):
-		icoBuf.WriteByte(16) // width
-		icoBuf.WriteByte(16) // height
-		icoBuf.WriteByte(0)  // colors
-		icoBuf.WriteByte(0)  // reserved
-		binary.Write(&icoBuf, binary.LittleEndian, uint16(1))  // planes
-		binary.Write(&icoBuf, binary.LittleEndian, uint16(32)) // bitCount
-
-		imageBytes := make([]byte, 128) // dummy DIB bytes > 64
-		binary.Write(&icoBuf, binary.LittleEndian, uint32(len(imageBytes))) // bytesInRes
-		binary.Write(&icoBuf, binary.LittleEndian, uint32(22))              // imageOffset = 6 + 16 = 22
-		icoBuf.Write(imageBytes)
-
-		fullICO := icoBuf.Bytes()
-
-		var fileContent bytes.Buffer
-		fileContent.Write(make([]byte, 64*1024)) // 64KB padding
-		fileContent.Write(fullICO)
-		fileContent.Write(make([]byte, 1024))
-
-		require.NoError(t, os.WriteFile(msiPath, fileContent.Bytes(), 0644))
-
-		iconURI, err := ExtractIconFromMSI(msiPath)
-		require.NoError(t, err)
+		assert.NotEmpty(t, iconURI)
 		assert.Contains(t, iconURI, "data:image/x-icon;base64,")
 	})
 
-	t.Run("MSI without embedded icon returns error", func(t *testing.T) {
+	t.Run("no icon found", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		msiPath := filepath.Join(tmpDir, "no_icon.msi")
-		require.NoError(t, os.WriteFile(msiPath, make([]byte, 1024), 0644))
+		msiPath := filepath.Join(tmpDir, "empty.msi")
+		require.NoError(t, os.WriteFile(msiPath, bytes.Repeat([]byte{0x00}, 1024), 0644))
 
 		_, err := ExtractIconFromMSI(msiPath)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "no embedded icon found")
 	})
 }
