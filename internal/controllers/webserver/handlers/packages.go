@@ -570,7 +570,7 @@ func (h *Handler) APIGetPackages(c echo.Context) error {
 			ExecutionContext: p.ExecutionContext.String(),
 			SilentArgs:       p.SilentArgs,
 			Icon:             p.Icon,
-			IconURL:          p.Icon,
+			IconURL:          icons.ResolveIconURL(p.Icon, p.Name),
 			Enabled:          p.Enabled,
 			DownloadURL:      fmt.Sprintf("/api/v1/packages/download/%s", p.ID.String()),
 			UpdatedAt:        p.UpdatedAt,

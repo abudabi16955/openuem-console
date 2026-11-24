@@ -16,7 +16,7 @@ templ SoftwarePackageDescription(packageID string, packageName string, packageBr
 					{ packageName }
 				}
 			</p>
-			<p class="uk-text-muted uk-text-italic">
+			<p class="uk-text-muted uk-text-italic truncate max-w-[200px]" title={ packageID }>
 				if strings.HasPrefix(packageID, "cask-") {
 					{ strings.TrimPrefix(packageID, "cask-") }
 				} else {

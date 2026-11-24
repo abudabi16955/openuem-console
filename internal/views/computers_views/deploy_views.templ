@@ -202,7 +202,7 @@ templ DeploymentsTable(c echo.Context, p partials.PaginationAndSort, agentId str
 			</tr>
 		</thead>
 		<tbody>
-			for _, item := range packages {
+			for idx, item := range packages {
 				<tr>
 					<td class="text-center !align-middle">
 						@partials.Brand(strings.ToLower(item.Name), "")
@@ -212,13 +212,48 @@ templ DeploymentsTable(c echo.Context, p partials.PaginationAndSort, agentId str
 					</td>
 					<td class="!align-middle">
 						if item.Failed {
-							<span class="text-red-600">
-								if item.MoreInfo != "" {
-									{ item.MoreInfo }
-								} else {
-									{ i18n.T(ctx, "agents.could_not_deploy") }
-								}
-							</span>
+							<div class="flex items-center gap-2">
+								<span class="uk-label uk-label-danger">{ i18n.T(ctx, "Failed") }</span>
+								<button
+									type="button"
+									class="uk-button uk-button-default uk-button-small flex items-center gap-1"
+									uk-toggle={ fmt.Sprintf("target: #deploy-error-modal-%d", idx) }
+									title={ i18n.T(ctx, "Details") }
+								>
+									<span uk-icon="icon: info; ratio: 0.8"></span>
+									<span>{ i18n.T(ctx, "Details") }</span>
+								</button>
+							</div>
+							<div id={ fmt.Sprintf("deploy-error-modal-%d", idx) } uk-modal>
+								<div class="uk-modal-dialog uk-modal-body">
+									<button class="uk-modal-close-default" type="button" uk-close></button>
+									<h2 class="uk-modal-title flex items-center gap-2 text-red-600">
+										<span uk-icon="icon: warning"></span>
+										<span>{ i18n.T(ctx, "Deployment Error") }</span>
+									</h2>
+									<p class="uk-text-meta">{ item.Name }</p>
+									<pre id={ fmt.Sprintf("deploy-error-pre-%d", idx) } class="uk-overflow-auto p-3 bg-gray-100 rounded text-xs select-all text-red-700 max-h-96">
+										if item.MoreInfo != "" {
+											{ item.MoreInfo }
+										} else {
+											{ i18n.T(ctx, "agents.could_not_deploy") }
+										}
+									</pre>
+									<div class="uk-modal-footer uk-text-right flex justify-end gap-2 px-0 pb-0">
+										<button
+											type="button"
+											class="uk-button uk-button-default uk-button-small"
+											_={ fmt.Sprintf("on click navigator.clipboard.writeText(#deploy-error-pre-%d.textContent) then call UIkit.notification({message: \x27%s\x27, status: \x27success\x27})", idx, i18n.T(ctx, "Clipboard")) }
+										>
+											<span uk-icon="icon: copy; ratio: 0.8" class="mr-1"></span>
+											<span>{ i18n.T(ctx, "Copy Error") }</span>
+										</button>
+										<button class="uk-button uk-button-primary uk-button-small uk-modal-close" type="button">
+											{ i18n.T(ctx, "Close") }
+										</button>
+									</div>
+								</div>
+							</div>
 						} else {
 							if item.Installed.IsZero() {
 								{ i18n.T(ctx, "In Progress") }

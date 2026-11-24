@@ -264,6 +264,24 @@ func TestPackages_APIGetPackages(t *testing.T) {
 
 	_, err = model.CreateSelfServicePackage(
 		t.Context(),
+		"Mozilla Firefox",
+		"Firefox Browser",
+		"General",
+		"120.0",
+		selfservicepackage.PackageTypeExe,
+		selfservicepackage.SourceTypeUpload,
+		"",
+		"/firefox.exe",
+		"hash_firefox",
+		selfservicepackage.ExecutionContextSystem,
+		"",
+		"firefox",
+		true,
+	)
+	require.NoError(t, err)
+
+	_, err = model.CreateSelfServicePackage(
+		t.Context(),
 		"Package Disabled",
 		"Description 2",
 		"General",
@@ -289,6 +307,7 @@ func TestPackages_APIGetPackages(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), "Package 1")
+	assert.Contains(t, rec.Body.String(), "data:image/svg+xml;base64,")
 	assert.NotContains(t, rec.Body.String(), "Package Disabled")
 }
 
