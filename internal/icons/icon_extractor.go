@@ -75,7 +75,7 @@ var brandKeywordRules = []brandRule{
 
 // brandSVGs contains authentic SVG vector definitions for brands (Simple Icons) and UI icons (Lucide).
 var brandSVGs = map[string]string{
-	"firefox": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#FF7139"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm7.1 7.37c-.32 1.48-1.07 3.32-2.3 4.67-.3-.72-.7-1.39-1.2-1.98-.12.82-.47 1.57-.96 2.18-.8 1-1.9 1.63-3.14 1.76.6-.46 1.05-1.12 1.25-1.89.21-.8.08-1.63-.34-2.34-.14-.24-.31-.47-.52-.66.07.61-.03 1.24-.3 1.8-.27.56-.73.99-1.3 1.23-.7.29-1.49.27-2.18-.06-.69-.33-1.19-.92-1.42-1.66a3.86 3.86 0 0 1 .53-3.32c-.93.5-1.67 1.27-2.13 2.21-.46.94-.61 2.02-.42 3.07.38 2.1 1.94 3.79 3.99 4.33 2.05.54 4.25-.11 5.63-1.67 1.38-1.56 1.85-3.73 1.2-5.67-.14-.42-.33-.82-.56-1.19.78.38 1.43.98 1.89 1.72z"/></svg>`,
+	"firefox": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#FF7139"><path d="M20.452 3.445a11.002 11.002 0 00-2.482-1.908C16.944.997 15.098.093 12.477.032c-.734-.017-1.457.03-2.174.144-.72.114-1.398.292-2.118.56-1.017.377-1.996.975-2.574 1.554.583-.349 1.476-.733 2.55-.992a10.083 10.083 0 013.729-.167c2.341.34 4.178 1.381 5.48 2.625a8.066 8.066 0 011.298 1.587c1.468 2.382 1.33 5.376.184 7.142-.85 1.312-2.67 2.544-4.37 2.53-.583-.023-1.438-.152-2.25-.566-2.629-1.343-3.021-4.688-1.118-6.306-.632-.136-1.82.13-2.646 1.363-.742 1.107-.7 2.816-.242 4.028a6.473 6.473 0 01-.59-1.895 7.695 7.695 0 01.416-3.845A8.212 8.212 0 019.45 5.399c.896-1.069 1.908-1.72 2.75-2.005-.54-.471-1.411-.738-2.421-.767C8.31 2.583 6.327 3.061 4.7 4.41a8.148 8.148 0 00-1.976 2.414c-.455.836-.691 1.659-.697 1.678.122-1.445.704-2.994 1.248-4.055-.79.413-1.827 1.668-2.41 3.042C.095 9.37-.2 11.608.14 13.989c.966 5.668 5.9 9.982 11.843 9.982C18.62 23.971 24 18.591 24 11.956a11.93 11.93 0 00-3.548-8.511z"/></svg>`,
 	"chrome":  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#4285F4"/><circle cx="12" cy="12" r="4" fill="#FFFFFF"/><circle cx="12" cy="12" r="3" fill="#1A73E8"/><path d="M12 2a10 10 0 0 1 8.66 5l-4.33 7.5A5 5 0 0 0 12 7V2z" fill="#EA4335"/><path d="M20.66 7a10 10 0 0 1 0 10H12a5 5 0 0 0 4.33-2.5L20.66 7z" fill="#FBBC04"/><path d="M12 17a5 5 0 0 0-4.33-2.5L3.34 7A10 10 0 0 0 12 22v-5z" fill="#34A853"/></svg>`,
 	"edge":    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#0078D7"><path d="M21.93 13.56c-.07-.38-.28-1.74-1.35-2.61-.92-.74-2.21-.92-3.13-.92-2.35 0-4.46 1.39-5.46 3.51-.55 1.18-.81 2.51-.74 3.83.08 1.52.75 2.94 1.88 3.97 1.13 1.03 2.66 1.61 4.24 1.61 3.57 0 6.63-2.63 6.63-6.63 0-.96-.18-1.9-.07-2.76zM12.07 2C6.54 2 2.07 6.47 2.07 12c0 4.19 2.58 7.78 6.27 9.27-.47-1.18-.68-2.48-.59-3.77.16-2.25 1.36-4.32 3.23-5.59 1.18-.8 2.57-1.25 4-1.29 1.13-.03 2.27.18 3.32.61.34-1.12.39-2.32.14-3.48C17.7 4.54 15.08 2 12.07 2z"/></svg>`,
 	"code":    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#007ACC"><path d="M23.15 2.587L18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.94-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>`,
@@ -136,13 +136,36 @@ func GetBrandIcon(nameOrBrand string) string {
 	return ""
 }
 
+// IsLegacyOrCorruptedFirefoxIcon checks whether an icon string contains the obsolete solid-disk Firefox vector or corrupt data.
+func IsLegacyOrCorruptedFirefoxIcon(iconURI string) bool {
+	if strings.HasPrefix(iconURI, "data:image/svg+xml;base64,") {
+		b64 := strings.TrimPrefix(iconURI, "data:image/svg+xml;base64,")
+		decoded, err := base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			return true
+		}
+		s := string(decoded)
+		if strings.Contains(s, "M12 0C5.373") || strings.Contains(s, "12-12S18.627 0 12 0z") {
+			return true
+		}
+	}
+	return false
+}
+
 // ResolveIconURL resolves an icon string and/or package name into a valid Data URI.
-// 1. If icon is already a Data URI (data:image/...), it is preserved.
-// 2. If icon is a brand/icon key, it is resolved to its authentic SVG Data URI.
-// 3. If icon is empty, but name matches a known brand, its authentic SVG Data URI is returned.
-// 4. Otherwise returns "".
+// 1. If icon is an obsolete solid-disk Firefox SVG or corrupted, it resolves to official Simple Icons Firefox SVG.
+// 2. If icon is already a Data URI (data:image/...) or URL, it is preserved.
+// 3. If icon is a brand/icon key, it is resolved to its authentic SVG Data URI.
+// 4. If icon is empty, but name matches a known brand, its authentic SVG Data URI is returned.
+// 5. Otherwise returns "".
 func ResolveIconURL(icon, name string) string {
 	trimmedIcon := strings.TrimSpace(icon)
+	lowerName := strings.ToLower(name)
+
+	if IsLegacyOrCorruptedFirefoxIcon(trimmedIcon) || (strings.Contains(lowerName, "firefox") && IsLegacyOrCorruptedFirefoxIcon(trimmedIcon)) {
+		return GetBrandIcon("firefox")
+	}
+
 	if strings.HasPrefix(trimmedIcon, "data:image/") || strings.HasPrefix(trimmedIcon, "http://") || strings.HasPrefix(trimmedIcon, "https://") {
 		return trimmedIcon
 	}

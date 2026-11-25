@@ -136,7 +136,43 @@ func (h *Handler) isAuthorizedForPackageDownload(c echo.Context) bool {
 	return false
 }
 
+func (h *Handler) repairFirefoxPackages(c echo.Context) {
+	if h.Model == nil || h.Model.Client == nil {
+		return
+	}
+	ctx := c.Request().Context()
+	pkgs, err := h.Model.Client.SelfServicePackage.Query().
+		Where(
+			selfservicepackage.Or(
+				selfservicepackage.NameContainsFold("firefox"),
+				selfservicepackage.IconContains("PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRkY3MTM5Ij48cGF0aCBkPSJNMTIgMEM1LjM3MyAwIDAgNS4zNzMgMCAxMnM1LjM3MyAxMiAxMiAxMiAxMi01LjM3MyAxMi0xMlMxOC42MjcgMCAxMiAwem"),
+			),
+		).All(ctx)
+	if err != nil {
+		return
+	}
+
+	correctIcon := icons.GetBrandIcon("firefox")
+	var updatedIDs []string
+	for _, p := range pkgs {
+		if p.Icon != correctIcon {
+			if err := h.Model.Client.SelfServicePackage.UpdateOneID(p.ID).
+				SetIcon(correctIcon).
+				Exec(ctx); err == nil {
+				p.Icon = correctIcon
+				updatedIDs = append(updatedIDs, p.ID.String())
+			}
+		}
+	}
+
+	for _, id := range updatedIDs {
+		h.notifySelfServiceUpdate("update", id)
+	}
+}
+
 func (h *Handler) Packages(c echo.Context) error {
+	h.repairFirefoxPackages(c)
+
 	commonInfo, err := h.GetCommonInfo(c)
 	if err != nil {
 		return err
@@ -165,6 +201,12 @@ func (h *Handler) Packages(c echo.Context) error {
 	pkgs, err := h.Model.GetSelfServicePackagesByPage(c.Request().Context(), p, f)
 	if err != nil {
 		return RenderError(c, partials.ErrorMessage(err.Error(), false))
+	}
+
+	for _, pkg := range pkgs {
+		if resolved := icons.ResolveIconURL(pkg.Icon, pkg.Name); resolved != "" {
+			pkg.Icon = resolved
+		}
 	}
 
 	return RenderView(c, packages_views.PackagesIndex(" | Packages", packages_views.Packages(c, p, f, pkgs, itemsPerPage, commonInfo), commonInfo))
@@ -554,6 +596,8 @@ func (h *Handler) APIGetPackages(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 	}
 
+	h.repairFirefoxPackages(c)
+
 	pkgs, err := h.Model.GetAllSelfServicePackages(c.Request().Context())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Could not retrieve packages: %v", err))
@@ -583,6 +627,7 @@ func (h *Handler) APIGetPackages(c echo.Context) error {
 		if !p.Enabled {
 			continue
 		}
+		resolvedIcon := icons.ResolveIconURL(p.Icon, p.Name)
 		response = append(response, PackageResponse{
 			ID:               p.ID.String(),
 			Name:             p.Name,
@@ -595,8 +640,8 @@ func (h *Handler) APIGetPackages(c echo.Context) error {
 			ChecksumSha256:   p.ChecksumSha256,
 			ExecutionContext: p.ExecutionContext.String(),
 			SilentArgs:       p.SilentArgs,
-			Icon:             p.Icon,
-			IconURL:          icons.ResolveIconURL(p.Icon, p.Name),
+			Icon:             resolvedIcon,
+			IconURL:          resolvedIcon,
 			Enabled:          p.Enabled,
 			DownloadURL:      fmt.Sprintf("/api/v1/packages/download/%s", p.ID.String()),
 			UpdatedAt:        p.UpdatedAt,
