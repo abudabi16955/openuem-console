@@ -170,10 +170,21 @@ func (h *Handler) Packages(c echo.Context) error {
 	return RenderView(c, packages_views.PackagesIndex(" | Packages", packages_views.Packages(c, p, f, pkgs, itemsPerPage, commonInfo), commonInfo))
 }
 
+func (h *Handler) renderPackageModalError(c echo.Context, target string, message string) error {
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTML)
+	c.Response().Header().Set(echo.HeaderXContentTypeOptions, "nosniff")
+	c.Response().Header().Set(echo.HeaderCacheControl, "no-cache")
+	c.Response().Header().Set("HX-Retarget", target)
+	c.Response().Header().Set("HX-Reswap", "innerHTML")
+	return packages_views.PackageModalError(message).Render(c.Request().Context(), c.Response().Writer)
+}
+
 func (h *Handler) SavePackage(c echo.Context) error {
+	errorTarget := "#new-package-error"
+
 	name := strings.TrimSpace(c.FormValue("name"))
 	if name == "" {
-		return RenderError(c, partials.ErrorMessage("Package name is required", false))
+		return h.renderPackageModalError(c, errorTarget, "Package name is required")
 	}
 
 	description := c.FormValue("description")
@@ -193,45 +204,45 @@ func (h *Handler) SavePackage(c echo.Context) error {
 
 	pkgType := selfservicepackage.PackageType(pkgTypeStr)
 	if err := selfservicepackage.PackageTypeValidator(pkgType); err != nil {
-		return RenderError(c, partials.ErrorMessage("Invalid package type", false))
+		return h.renderPackageModalError(c, errorTarget, "Invalid package type")
 	}
 
 	sourceType := selfservicepackage.SourceType(sourceTypeStr)
 	if err := selfservicepackage.SourceTypeValidator(sourceType); err != nil {
-		return RenderError(c, partials.ErrorMessage("Invalid source type", false))
+		return h.renderPackageModalError(c, errorTarget, "Invalid source type")
 	}
 
 	execContext := selfservicepackage.ExecutionContext(execContextStr)
 	if err := selfservicepackage.ExecutionContextValidator(execContext); err != nil {
-		return RenderError(c, partials.ErrorMessage("Invalid execution context", false))
+		return h.renderPackageModalError(c, errorTarget, "Invalid execution context")
 	}
 
 	filePath := ""
 	if sourceType == selfservicepackage.SourceTypeUpload {
 		file, err := c.FormFile("file")
 		if err != nil {
-			return RenderError(c, partials.ErrorMessage("Please select a file to upload", false))
+			return h.renderPackageModalError(c, errorTarget, "Please select a file to upload")
 		}
 
 		ext := strings.ToLower(filepath.Ext(file.Filename))
 		switch pkgType {
 		case selfservicepackage.PackageTypeMsi:
 			if ext != ".msi" {
-				return RenderError(c, partials.ErrorMessage("File extension must be .msi for MSI package type", false))
+				return h.renderPackageModalError(c, errorTarget, "File extension must be .msi for MSI package type")
 			}
 		case selfservicepackage.PackageTypeExe:
 			if ext != ".exe" {
-				return RenderError(c, partials.ErrorMessage("File extension must be .exe for EXE package type", false))
+				return h.renderPackageModalError(c, errorTarget, "File extension must be .exe for EXE package type")
 			}
 		case selfservicepackage.PackageTypeZip:
 			if ext != ".zip" {
-				return RenderError(c, partials.ErrorMessage("File extension must be .zip for ZIP package type", false))
+				return h.renderPackageModalError(c, errorTarget, "File extension must be .zip for ZIP package type")
 			}
 		}
 
 		src, err := file.Open()
 		if err != nil {
-			return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not open uploaded file: %v", err), false))
+			return h.renderPackageModalError(c, errorTarget, fmt.Sprintf("Could not open uploaded file: %v", err))
 		}
 		defer src.Close()
 
@@ -239,7 +250,7 @@ func (h *Handler) SavePackage(c echo.Context) error {
 		destPath := filepath.Join(h.getPackagesDir(), destFilename)
 		dst, err := os.Create(destPath)
 		if err != nil {
-			return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not save package file: %v", err), false))
+			return h.renderPackageModalError(c, errorTarget, fmt.Sprintf("Could not save package file: %v", err))
 		}
 		defer dst.Close()
 
@@ -247,7 +258,7 @@ func (h *Handler) SavePackage(c echo.Context) error {
 		writer := io.MultiWriter(dst, hasher)
 		if _, err := io.Copy(writer, src); err != nil {
 			os.Remove(destPath)
-			return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not write package file: %v", err), false))
+			return h.renderPackageModalError(c, errorTarget, fmt.Sprintf("Could not write package file: %v", err))
 		}
 
 		// Checksum is 100% computed by server after upload
@@ -256,7 +267,7 @@ func (h *Handler) SavePackage(c echo.Context) error {
 		checksum = calcChecksum
 	} else if sourceType == selfservicepackage.SourceTypeHTTPS {
 		if pkgType != selfservicepackage.PackageTypeWinget && sourceURL == "" {
-			return RenderError(c, partials.ErrorMessage("Source URL is required for HTTPS source type", false))
+			return h.renderPackageModalError(c, errorTarget, "Source URL is required for HTTPS source type")
 		}
 	}
 
@@ -267,6 +278,10 @@ func (h *Handler) SavePackage(c echo.Context) error {
 		}
 	} else if icon == "" {
 		icon = icons.ExtractIcon(name, filePath)
+	}
+
+	if resolved := icons.ResolveIconURL(icon, name); resolved != "" {
+		icon = resolved
 	}
 
 	createdPkg, err := h.Model.CreateSelfServicePackage(
@@ -289,7 +304,7 @@ func (h *Handler) SavePackage(c echo.Context) error {
 		if filePath != "" {
 			os.Remove(filePath)
 		}
-		return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not create package: %v", err), false))
+		return h.renderPackageModalError(c, errorTarget, fmt.Sprintf("Could not create package: %v", err))
 	}
 
 	h.notifySelfServiceUpdate("create", createdPkg.ID.String())
@@ -308,19 +323,26 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 		idStr = c.FormValue("id")
 	}
 
+	errorTarget := "#edit-package-error"
+	if idStr != "" {
+		errorTarget = fmt.Sprintf("#edit-package-error-%s, #edit-package-error", idStr)
+	}
+
 	pkgID, err := uuid.Parse(idStr)
 	if err != nil {
-		return RenderError(c, partials.ErrorMessage("Invalid package ID", false))
+		return h.renderPackageModalError(c, errorTarget, "Invalid package ID")
 	}
+
+	errorTarget = fmt.Sprintf("#edit-package-error-%s, #edit-package-error", pkgID.String())
 
 	existingPkg, err := h.Model.GetSelfServicePackageByID(c.Request().Context(), pkgID)
 	if err != nil {
-		return RenderError(c, partials.ErrorMessage("Package not found", false))
+		return h.renderPackageModalError(c, errorTarget, "Package not found")
 	}
 
 	name := strings.TrimSpace(c.FormValue("name"))
 	if name == "" {
-		return RenderError(c, partials.ErrorMessage("Package name is required", false))
+		return h.renderPackageModalError(c, errorTarget, "Package name is required")
 	}
 
 	description := c.FormValue("description")
@@ -340,17 +362,17 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 
 	pkgType := selfservicepackage.PackageType(pkgTypeStr)
 	if err := selfservicepackage.PackageTypeValidator(pkgType); err != nil {
-		return RenderError(c, partials.ErrorMessage("Invalid package type", false))
+		return h.renderPackageModalError(c, errorTarget, "Invalid package type")
 	}
 
 	sourceType := selfservicepackage.SourceType(sourceTypeStr)
 	if err := selfservicepackage.SourceTypeValidator(sourceType); err != nil {
-		return RenderError(c, partials.ErrorMessage("Invalid source type", false))
+		return h.renderPackageModalError(c, errorTarget, "Invalid source type")
 	}
 
 	execContext := selfservicepackage.ExecutionContext(execContextStr)
 	if err := selfservicepackage.ExecutionContextValidator(execContext); err != nil {
-		return RenderError(c, partials.ErrorMessage("Invalid execution context", false))
+		return h.renderPackageModalError(c, errorTarget, "Invalid execution context")
 	}
 
 	filePath := existingPkg.FilePath
@@ -364,21 +386,21 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 		switch pkgType {
 		case selfservicepackage.PackageTypeMsi:
 			if ext != ".msi" {
-				return RenderError(c, partials.ErrorMessage("File extension must be .msi for MSI package type", false))
+				return h.renderPackageModalError(c, errorTarget, "File extension must be .msi for MSI package type")
 			}
 		case selfservicepackage.PackageTypeExe:
 			if ext != ".exe" {
-				return RenderError(c, partials.ErrorMessage("File extension must be .exe for EXE package type", false))
+				return h.renderPackageModalError(c, errorTarget, "File extension must be .exe for EXE package type")
 			}
 		case selfservicepackage.PackageTypeZip:
 			if ext != ".zip" {
-				return RenderError(c, partials.ErrorMessage("File extension must be .zip for ZIP package type", false))
+				return h.renderPackageModalError(c, errorTarget, "File extension must be .zip for ZIP package type")
 			}
 		}
 
 		src, err := file.Open()
 		if err != nil {
-			return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not open uploaded file: %v", err), false))
+			return h.renderPackageModalError(c, errorTarget, fmt.Sprintf("Could not open uploaded file: %v", err))
 		}
 		defer src.Close()
 
@@ -386,7 +408,7 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 		destPath := filepath.Join(h.getPackagesDir(), destFilename)
 		dst, err := os.Create(destPath)
 		if err != nil {
-			return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not save package file: %v", err), false))
+			return h.renderPackageModalError(c, errorTarget, fmt.Sprintf("Could not save package file: %v", err))
 		}
 		defer dst.Close()
 
@@ -394,7 +416,7 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 		writer := io.MultiWriter(dst, hasher)
 		if _, err := io.Copy(writer, src); err != nil {
 			os.Remove(destPath)
-			return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not write package file: %v", err), false))
+			return h.renderPackageModalError(c, errorTarget, fmt.Sprintf("Could not write package file: %v", err))
 		}
 
 		// Compute sha256 100% on server
@@ -420,6 +442,10 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 		}
 	}
 
+	if resolved := icons.ResolveIconURL(icon, name); resolved != "" {
+		icon = resolved
+	}
+
 	_, err = h.Model.UpdateSelfServicePackage(
 		c.Request().Context(),
 		pkgID,
@@ -438,7 +464,7 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 		enabled,
 	)
 	if err != nil {
-		return RenderError(c, partials.ErrorMessage(fmt.Sprintf("Could not update package: %v", err), false))
+		return h.renderPackageModalError(c, errorTarget, fmt.Sprintf("Could not update package: %v", err))
 	}
 
 	h.notifySelfServiceUpdate("update", pkgID.String())

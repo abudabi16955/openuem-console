@@ -350,6 +350,8 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 		err := h.SavePackage(c)
 		assert.NoError(t, err)
 		assert.Contains(t, rec.Body.String(), "Invalid package type")
+		assert.Equal(t, "#new-package-error", rec.Header().Get("HX-Retarget"))
+		assert.Equal(t, "innerHTML", rec.Header().Get("HX-Reswap"))
 	})
 
 	t.Run("missing package name", func(t *testing.T) {
@@ -369,12 +371,13 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 
 	t.Run("valid https package creation", func(t *testing.T) {
 		form := url.Values{
-			"name":              {"HTTPS App"},
+			"name":              {"Google Chrome"},
 			"package_type":      {"msi"},
 			"source_type":        {"https"},
 			"source_url":         {"https://example.com/app.msi"},
 			"execution_context":  {"system"},
 			"enabled":            {"true"},
+			"icon":               {"chrome"},
 		}
 		req := httptest.NewRequest(http.MethodPost, "/packages/new", strings.NewReader(form.Encode())).WithContext(initLocalesForTest(t))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
@@ -389,7 +392,34 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 		all, err := model.GetAllSelfServicePackages(t.Context())
 		require.NoError(t, err)
 		assert.Len(t, all, 1)
-		assert.Equal(t, "HTTPS App", all[0].Name)
+		assert.Equal(t, "Google Chrome", all[0].Name)
+		assert.True(t, strings.HasPrefix(all[0].Icon, "data:image/svg+xml;base64,"))
+	})
+
+
+	t.Run("update package validation error and retarget", func(t *testing.T) {
+		all, err := model.GetAllSelfServicePackages(t.Context())
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		pkg := all[0]
+
+		form := url.Values{
+			"name":         {""},
+			"package_type": {"msi"},
+		}
+		req := httptest.NewRequest(http.MethodPost, "/packages/edit/"+pkg.ID.String(), strings.NewReader(form.Encode())).WithContext(initLocalesForTest(t))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("id")
+		c.SetParamValues(pkg.ID.String())
+		c.Set("csrf", "test-csrf")
+
+		err = h.UpdatePackage(c)
+		assert.NoError(t, err)
+		assert.Contains(t, rec.Body.String(), "Package name is required")
+		assert.Contains(t, rec.Header().Get("HX-Retarget"), "edit-package-error")
+		assert.Equal(t, "innerHTML", rec.Header().Get("HX-Reswap"))
 	})
 
 	t.Run("delete package", func(t *testing.T) {
