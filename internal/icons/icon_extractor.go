@@ -143,7 +143,7 @@ func GetBrandIcon(nameOrBrand string) string {
 // 4. Otherwise returns "".
 func ResolveIconURL(icon, name string) string {
 	trimmedIcon := strings.TrimSpace(icon)
-	if strings.HasPrefix(trimmedIcon, "data:image/") {
+	if strings.HasPrefix(trimmedIcon, "data:image/") || strings.HasPrefix(trimmedIcon, "http://") || strings.HasPrefix(trimmedIcon, "https://") {
 		return trimmedIcon
 	}
 	if trimmedIcon != "" {

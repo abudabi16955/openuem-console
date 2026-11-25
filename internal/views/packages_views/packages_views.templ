@@ -141,7 +141,7 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 											case selfservicepackage.PackageTypeMsi:
 												<span class="uk-badge bg-blue-600 text-white uppercase text-xs px-2 py-0.5 rounded font-mono">MSI</span>
 											case selfservicepackage.PackageTypeExe:
-												<span class="uk-badge bg-amber-600 text-white uppercase text-xs px-2 py-0.5 rounded font-mono">EXE</span>
+												<span class="uk-badge bg-amber-400 text-zinc-950 font-bold uppercase text-xs px-2 py-0.5 rounded font-mono">EXE</span>
 											case selfservicepackage.PackageTypeZip:
 												<span class="uk-badge bg-purple-600 text-white uppercase text-xs px-2 py-0.5 rounded font-mono">ZIP</span>
 											case selfservicepackage.PackageTypeWinget:
@@ -163,7 +163,7 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 									</td>
 									<td class="!align-middle">
 										if pkg.ExecutionContext == selfservicepackage.ExecutionContextSystem {
-											<span class="uk-badge bg-slate-700 text-white text-xs px-2 py-0.5 rounded uppercase font-mono">SYSTEM</span>
+											<span class="uk-badge bg-slate-200 text-slate-900 border border-slate-300 font-bold text-xs px-2 py-0.5 rounded uppercase font-mono">SYSTEM</span>
 										} else {
 											<span class="uk-badge bg-cyan-700 text-white text-xs px-2 py-0.5 rounded uppercase font-mono">USER</span>
 										}
@@ -204,10 +204,10 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 											<button
 												type="button"
 												title={ i18n.T(ctx, "packages.delete", i18n.Default("Delete")) }
-												class="uk-button uk-button-small uk-button-danger text-red-600"
+												class="uk-button uk-button-small uk-button-danger text-white hover:bg-red-700"
 												uk-toggle={ fmt.Sprintf("target: #delete-package-modal-%s", pkg.ID.String()) }
 											>
-												<uk-icon hx-history="false" icon="trash-2" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
+												<uk-icon hx-history="false" icon="trash-2" custom-class="h-3.5 w-3.5 text-white" uk-cloak></uk-icon>
 											</button>
 										</div>
 										@EditPackageModal(pkg, commonInfo)
@@ -259,6 +259,18 @@ templ PackagesIndex(title string, cmp templ.Component, commonInfo *partials.Comm
 	}
 }
 
+templ PackageModalError(message string) {
+	if message != "" {
+		<div class="uk-alert uk-alert-danger uk-animation-fade text-xs p-3 my-2 rounded flex items-center justify-between gap-2 border border-red-300 bg-red-50 text-red-800 dark:bg-red-950/60 dark:border-red-800 dark:text-red-200" uk-alert>
+			<div class="flex items-center gap-2">
+				<uk-icon icon="triangle-alert" custom-class="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" uk-cloak></uk-icon>
+				<span class="font-medium">{ message }</span>
+			</div>
+			<a class="uk-alert-close text-red-600 dark:text-red-400 hover:opacity-80" uk-close></a>
+		</div>
+	}
+}
+
 templ NewPackageModal(commonInfo *partials.CommonInfo) {
 	<div id="new-package-modal" uk-modal>
 		<div class="uk-modal-dialog uk-margin-auto-vertical w-2/3">
@@ -268,6 +280,8 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 				hx-encoding="multipart/form-data"
 				hx-target="#main"
 				hx-swap="outerHTML"
+				hx-indicator="#new-package-spinner"
+				hx-disabled-elt="#new-package-save-btn"
 				hx-on::after-request="if (event.detail.successful) UIkit.modal('#new-package-modal').hide()"
 			>
 				<div class="uk-modal-header">
@@ -277,6 +291,7 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 					</h3>
 				</div>
 				<div class="uk-modal-body flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+					<div id="new-package-error"></div>
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.name", i18n.Default("Name")) } <span class="text-red-500">*</span></label>
@@ -330,7 +345,7 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 					</div>
 
 					<div>
-						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.description", i18n.Default("Description")) }</label>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.field_description", i18n.Default("Description")) }</label>
 						<textarea name="description" class="uk-textarea" rows="2" placeholder="Brief description of this software package"></textarea>
 					</div>
 
@@ -390,7 +405,8 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 				</div>
 				<div class="uk-modal-footer text-right flex justify-end gap-2">
 					<button class="uk-button uk-button-default uk-modal-close" type="button">{ i18n.T(ctx, "Cancel", i18n.Default("Cancel")) }</button>
-					<button class="uk-button uk-button-primary flex items-center gap-2" type="submit">
+					<button id="new-package-save-btn" class="uk-button uk-button-primary flex items-center gap-2" type="submit">
+						<uk-icon id="new-package-spinner" icon="loader-circle" custom-class="htmx-indicator h-4 w-4 animate-spin" uk-cloak></uk-icon>
 						<uk-icon icon="save" custom-class="h-4 w-4" uk-cloak></uk-icon>
 						<span>{ i18n.T(ctx, "Save", i18n.Default("Save")) }</span>
 					</button>
@@ -408,6 +424,9 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 		urlSecID := fmt.Sprintf("edit-url-section-%s", pkg.ID.String())
 		iconInputID := fmt.Sprintf("edit-package-icon-input-%s", pkg.ID.String())
 		iconPreviewID := fmt.Sprintf("edit-package-icon-preview-%s", pkg.ID.String())
+		errorID := fmt.Sprintf("edit-package-error-%s", pkg.ID.String())
+		saveBtnID := fmt.Sprintf("edit-package-save-btn-%s", pkg.ID.String())
+		spinnerID := fmt.Sprintf("edit-package-spinner-%s", pkg.ID.String())
 	}}
 	<div id={ modalID } uk-modal>
 		<div class="uk-modal-dialog uk-margin-auto-vertical w-2/3">
@@ -417,6 +436,8 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 				hx-encoding="multipart/form-data"
 				hx-target="#main"
 				hx-swap="outerHTML"
+				hx-indicator={ fmt.Sprintf("#%s", spinnerID) }
+				hx-disabled-elt={ fmt.Sprintf("#%s", saveBtnID) }
 				hx-on::after-request={ templ.ComponentScript{Call: fmt.Sprintf("if (event.detail.successful) UIkit.modal('#%s').hide()", modalID)} }
 			>
 				<input type="hidden" name="id" value={ pkg.ID.String() } />
@@ -427,6 +448,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 					</h3>
 				</div>
 				<div class="uk-modal-body flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+					<div id={ errorID } class="edit-package-error"></div>
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.name", i18n.Default("Name")) } <span class="text-red-500">*</span></label>
@@ -488,7 +510,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 					</div>
 
 					<div>
-						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.description", i18n.Default("Description")) }</label>
+						<label class="uk-form-label font-semibold text-xs dark:text-white">{ i18n.T(ctx, "packages.field_description", i18n.Default("Description")) }</label>
 						<textarea name="description" class="uk-textarea" rows="2">{ pkg.Description }</textarea>
 					</div>
 
@@ -550,7 +572,8 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 				</div>
 				<div class="uk-modal-footer text-right flex justify-end gap-2">
 					<button class="uk-button uk-button-default uk-modal-close" type="button">{ i18n.T(ctx, "Cancel", i18n.Default("Cancel")) }</button>
-					<button class="uk-button uk-button-primary flex items-center gap-2" type="submit">
+					<button id={ saveBtnID } class="uk-button uk-button-primary flex items-center gap-2" type="submit">
+						<uk-icon id={ spinnerID } icon="loader-circle" custom-class="htmx-indicator h-4 w-4 animate-spin" uk-cloak></uk-icon>
 						<uk-icon icon="save" custom-class="h-4 w-4" uk-cloak></uk-icon>
 						<span>{ i18n.T(ctx, "Save", i18n.Default("Save")) }</span>
 					</button>
