@@ -2,6 +2,7 @@ package icons
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"mime/multipart"
 	"os"
@@ -47,7 +48,17 @@ func TestExtractIcon_Brands(t *testing.T) {
 func TestResolveIconURL(t *testing.T) {
 	t.Run("existing data URI preserved", func(t *testing.T) {
 		custom := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="
-		assert.Equal(t, custom, ResolveIconURL(custom, "Firefox"))
+		assert.Equal(t, custom, ResolveIconURL(custom, "Other App"))
+	})
+
+	t.Run("legacy firefox disk SVG resolved to official vector", func(t *testing.T) {
+		legacyDiskSVG := "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#FF7139"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm7.1 7.37c-.32 1.48-1.07 3.32-2.3 4.67"/></svg>`))
+		res := ResolveIconURL(legacyDiskSVG, "Mozilla Firefox")
+		assert.Equal(t, GetBrandIcon("firefox"), res)
+		decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(res, "data:image/svg+xml;base64,"))
+		require.NoError(t, err)
+		assert.NotContains(t, string(decoded), "M12 0C5.373")
+		assert.Contains(t, string(decoded), "M20.452 3.445")
 	})
 
 	t.Run("brand key resolved", func(t *testing.T) {

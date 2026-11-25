@@ -443,3 +443,68 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 		assert.Empty(t, remaining)
 	})
 }
+
+func TestPackages_RepairLegacyFirefoxIcons(t *testing.T) {
+	e := echo.New()
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	defer client.Close()
+
+	model := &models.Model{Client: client}
+	h := &Handler{
+		Model: model,
+	}
+
+	cert, _ := generateTestCert(t)
+
+	// Create a package with legacy solid-disk SVG Base64
+	legacyDiskSVG := "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#FF7139"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm7.1 7.37c-.32 1.48-1.07 3.32-2.3 4.67"/></svg>`))
+
+	ffPkg, err := model.CreateSelfServicePackage(
+		t.Context(),
+		"Mozilla Firefox",
+		"Firefox Browser",
+		"Browsers",
+		"130.0",
+		selfservicepackage.PackageTypeExe,
+		selfservicepackage.SourceTypeUpload,
+		"",
+		"/firefox.exe",
+		"hash_firefox",
+		selfservicepackage.ExecutionContextSystem,
+		"",
+		legacyDiskSVG,
+		true,
+	)
+	require.NoError(t, err)
+
+	// Verify DB initially has legacy icon
+	dbPkg, err := model.GetSelfServicePackageByID(t.Context(), ffPkg.ID)
+	require.NoError(t, err)
+	assert.Equal(t, legacyDiskSVG, dbPkg.Icon)
+
+	// Call APIGetPackages
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/packages", nil)
+	req.TLS = cryptoTLSStub(cert)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = h.APIGetPackages(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify response does not contain legacy disk path but contains Simple Icons path
+	resBody := rec.Body.String()
+	assert.NotContains(t, resBody, "M12 0C5.373")
+	assert.Contains(t, resBody, "MjAuNDUyIDMuNDQ1")
+
+	// Verify DB record was updated directly in database
+	dbPkgAfter, err := model.GetSelfServicePackageByID(t.Context(), ffPkg.ID)
+	require.NoError(t, err)
+	assert.NotEqual(t, legacyDiskSVG, dbPkgAfter.Icon)
+	assert.Contains(t, dbPkgAfter.Icon, "data:image/svg+xml;base64,")
+
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(dbPkgAfter.Icon, "data:image/svg+xml;base64,"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(decoded), "M12 0C5.373")
+	assert.Contains(t, string(decoded), "M20.452 3.445")
+}
