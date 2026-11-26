@@ -27,6 +27,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/open-uem/ent/enttest"
 	"github.com/open-uem/ent/selfservicepackage"
+	"github.com/open-uem/openuem-console/internal/icons"
 	"github.com/open-uem/openuem-console/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -444,7 +445,7 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 	})
 }
 
-func TestPackages_RepairLegacyFirefoxIcons(t *testing.T) {
+func TestPackages_CustomIconPersistenceAndPriority(t *testing.T) {
 	e := echo.New()
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
 	defer client.Close()
@@ -456,31 +457,82 @@ func TestPackages_RepairLegacyFirefoxIcons(t *testing.T) {
 
 	cert, _ := generateTestCert(t)
 
-	// Create a package with legacy solid-disk SVG Base64
-	legacyDiskSVG := "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#FF7139"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm7.1 7.37c-.32 1.48-1.07 3.32-2.3 4.67"/></svg>`))
+	// Custom user uploaded icon for a package named "Mozilla Firefox"
+	customPNG := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 
 	ffPkg, err := model.CreateSelfServicePackage(
 		t.Context(),
 		"Mozilla Firefox",
-		"Firefox Browser",
+		"Customized Firefox",
 		"Browsers",
-		"130.0",
+		"133.0",
 		selfservicepackage.PackageTypeExe,
 		selfservicepackage.SourceTypeUpload,
 		"",
 		"/firefox.exe",
-		"hash_firefox",
+		"hash_firefox_custom",
 		selfservicepackage.ExecutionContextSystem,
 		"",
-		legacyDiskSVG,
+		customPNG,
 		true,
 	)
 	require.NoError(t, err)
 
-	// Verify DB initially has legacy icon
+	// Verify DB initially has custom icon
 	dbPkg, err := model.GetSelfServicePackageByID(t.Context(), ffPkg.ID)
 	require.NoError(t, err)
-	assert.Equal(t, legacyDiskSVG, dbPkg.Icon)
+	assert.Equal(t, customPNG, dbPkg.Icon)
+
+	// 1. Call APIGetPackages
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/packages", nil)
+	req.TLS = cryptoTLSStub(cert)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = h.APIGetPackages(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify response body retains user's exact custom icon (not overwritten by brand fallback)
+	resBody := rec.Body.String()
+	assert.Contains(t, resBody, customPNG)
+
+	// Verify DB record was NOT mutated / overwritten
+	dbPkgAfter, err := model.GetSelfServicePackageByID(t.Context(), ffPkg.ID)
+	require.NoError(t, err)
+	assert.Equal(t, customPNG, dbPkgAfter.Icon, "Custom uploaded icon must remain untouched in DB across APIGetPackages listing")
+}
+
+func TestPackages_BrandFallbackWithoutUpload(t *testing.T) {
+	e := echo.New()
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	defer client.Close()
+
+	model := &models.Model{Client: client}
+	h := &Handler{
+		Model: model,
+	}
+
+	cert, _ := generateTestCert(t)
+
+	// Package named "Mozilla Firefox" created without an uploaded custom icon
+	ffPkg, err := model.CreateSelfServicePackage(
+		t.Context(),
+		"Mozilla Firefox",
+		"Official Winget Package",
+		"Browsers",
+		"133.0",
+		selfservicepackage.PackageTypeWinget,
+		selfservicepackage.SourceTypeHTTPS,
+		"Mozilla.Firefox",
+		"",
+		"",
+		selfservicepackage.ExecutionContextSystem,
+		"",
+		"",
+		true,
+	)
+	require.NoError(t, err)
 
 	// Call APIGetPackages
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/packages", nil)
@@ -492,19 +544,14 @@ func TestPackages_RepairLegacyFirefoxIcons(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	// Verify response does not contain legacy disk path but contains Simple Icons path
+	// Response should resolve to official full-color Firefox SVG
+	expectedBrandIcon := icons.GetBrandIcon("firefox")
+	require.NotEmpty(t, expectedBrandIcon)
 	resBody := rec.Body.String()
-	assert.NotContains(t, resBody, "M12 0C5.373")
-	assert.Contains(t, resBody, "MjAuNDUyIDMuNDQ1")
+	assert.Contains(t, resBody, expectedBrandIcon, "APIGetPackages should return official brand icon fallback for Mozilla Firefox")
 
-	// Verify DB record was updated directly in database
+	// Verify DB record was not destructively mutated
 	dbPkgAfter, err := model.GetSelfServicePackageByID(t.Context(), ffPkg.ID)
 	require.NoError(t, err)
-	assert.NotEqual(t, legacyDiskSVG, dbPkgAfter.Icon)
-	assert.Contains(t, dbPkgAfter.Icon, "data:image/svg+xml;base64,")
-
-	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(dbPkgAfter.Icon, "data:image/svg+xml;base64,"))
-	require.NoError(t, err)
-	assert.NotContains(t, string(decoded), "M12 0C5.373")
-	assert.Contains(t, string(decoded), "M20.452 3.445")
+	assert.Equal(t, "", dbPkgAfter.Icon, "Database icon field should remain empty when not set by user")
 }

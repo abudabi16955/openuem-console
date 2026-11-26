@@ -78,3 +78,72 @@ func TestLocales_BitLockerKeysComplete(t *testing.T) {
 		})
 	}
 }
+
+var expectedPackagesKeys = []string{
+	"title",
+	"description",
+	"upload_icon",
+	"icon_preview",
+	"icon_invalid_format",
+	"icon_too_large",
+	"new",
+	"edit",
+	"delete",
+	"confirm_delete",
+	"name",
+	"category",
+	"package_type",
+	"source_type",
+	"execution_context",
+	"status",
+	"upload",
+	"https",
+	"enabled",
+	"disabled",
+	"download",
+	"version",
+	"icon",
+	"file",
+	"source_url",
+	"silent_args",
+	"checksum",
+	"no_packages",
+}
+
+func TestLocales_PackagesKeysComplete(t *testing.T) {
+	locales := []string{"en", "ca", "de", "es", "fr", "no", "pt"}
+
+	for _, loc := range locales {
+		t.Run(loc, func(t *testing.T) {
+			path := filepath.Join(".", loc+".yaml")
+			data, err := os.ReadFile(path)
+			require.NoError(t, err, "failed to read locale file %s", path)
+
+			var raw map[string]interface{}
+			err = yaml.Unmarshal(data, &raw)
+			require.NoError(t, err, "failed to parse YAML for %s", path)
+
+			var rootMap map[string]interface{}
+			for _, v := range raw {
+				if m, ok := v.(map[string]interface{}); ok {
+					rootMap = m
+					break
+				}
+			}
+			require.NotNil(t, rootMap, "root map not found in %s", path)
+
+			pkgs, ok := rootMap["packages"].(map[string]interface{})
+			require.True(t, ok, "packages section missing in %s", path)
+
+			for _, expectedKey := range expectedPackagesKeys {
+				val, exists := pkgs[expectedKey]
+				assert.True(t, exists, "missing key %s in %s.yaml", expectedKey, loc)
+				if exists {
+					s, isStr := val.(string)
+					assert.True(t, isStr, "key %s in %s.yaml is not string", expectedKey, loc)
+					assert.NotEmpty(t, s, "key %s in %s.yaml has empty translation", expectedKey, loc)
+				}
+			}
+		})
+	}
+}
