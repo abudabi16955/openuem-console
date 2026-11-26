@@ -51,6 +51,18 @@ func TestResolveIconURL(t *testing.T) {
 		assert.Equal(t, custom, ResolveIconURL(custom, "Other App"))
 	})
 
+	t.Run("user custom uploaded PNG icon has strict priority over brand matching even for Mozilla Firefox", func(t *testing.T) {
+		customPNG := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+		res := ResolveIconURL(customPNG, "Mozilla Firefox")
+		assert.Equal(t, customPNG, res, "custom uploaded PNG icon must never be overwritten by brand fallback")
+	})
+
+	t.Run("user custom uploaded SVG icon has strict priority over brand matching even for Mozilla Firefox", func(t *testing.T) {
+		customSVG := "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="blue"/></svg>`))
+		res := ResolveIconURL(customSVG, "Mozilla Firefox")
+		assert.Equal(t, customSVG, res, "custom uploaded SVG icon must never be overwritten by brand fallback")
+	})
+
 	t.Run("legacy firefox disk SVG resolved to official vector", func(t *testing.T) {
 		legacyDiskSVG := "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#FF7139"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm7.1 7.37c-.32 1.48-1.07 3.32-2.3 4.67"/></svg>`))
 		res := ResolveIconURL(legacyDiskSVG, "Mozilla Firefox")
@@ -58,7 +70,17 @@ func TestResolveIconURL(t *testing.T) {
 		decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(res, "data:image/svg+xml;base64,"))
 		require.NoError(t, err)
 		assert.NotContains(t, string(decoded), "M12 0C5.373")
-		assert.Contains(t, string(decoded), "M20.452 3.445")
+		assert.Contains(t, string(decoded), `viewBox="0 0 512 512"`)
+		assert.Contains(t, string(decoded), `<radialGradient id="g"`)
+	})
+
+	t.Run("brand name fallback for Mozilla Firefox returns full-color SVG without upload", func(t *testing.T) {
+		res := ResolveIconURL("", "Mozilla Firefox")
+		assert.Equal(t, GetBrandIcon("firefox"), res)
+		decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(res, "data:image/svg+xml;base64,"))
+		require.NoError(t, err)
+		assert.Contains(t, string(decoded), `viewBox="0 0 512 512"`)
+		assert.Contains(t, string(decoded), `<radialGradient id="g"`)
 	})
 
 	t.Run("brand key resolved", func(t *testing.T) {
@@ -138,6 +160,72 @@ func TestProcessUploadedIcon(t *testing.T) {
 		res, err := ProcessUploadedIcon(files[0])
 		assert.NoError(t, err)
 		assert.Contains(t, res, "data:image/png;base64,")
+	})
+
+	t.Run("valid svg upload", func(t *testing.T) {
+		svgContent := []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><circle cx="5" cy="5" r="5"/></svg>`)
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		part, err := writer.CreateFormFile("icon_file", "test.svg")
+		require.NoError(t, err)
+		_, err = part.Write(svgContent)
+		require.NoError(t, err)
+		require.NoError(t, writer.Close())
+
+		reader := multipart.NewReader(&body, writer.Boundary())
+		form, err := reader.ReadForm(1024 * 1024)
+		require.NoError(t, err)
+
+		files := form.File["icon_file"]
+		require.Len(t, files, 1)
+
+		res, err := ProcessUploadedIcon(files[0])
+		assert.NoError(t, err)
+		assert.Contains(t, res, "data:image/svg+xml;base64,")
+	})
+
+	t.Run("valid webp upload", func(t *testing.T) {
+		webpContent := []byte{0x52, 0x49, 0x46, 0x46, 0x20, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x20, 0x14, 0x00, 0x00, 0x00}
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		part, err := writer.CreateFormFile("icon_file", "test.webp")
+		require.NoError(t, err)
+		_, err = part.Write(webpContent)
+		require.NoError(t, err)
+		require.NoError(t, writer.Close())
+
+		reader := multipart.NewReader(&body, writer.Boundary())
+		form, err := reader.ReadForm(1024 * 1024)
+		require.NoError(t, err)
+
+		files := form.File["icon_file"]
+		require.Len(t, files, 1)
+
+		res, err := ProcessUploadedIcon(files[0])
+		assert.NoError(t, err)
+		assert.Contains(t, res, "data:image/webp;base64,")
+	})
+
+	t.Run("upload exceeding 2MB rejected", func(t *testing.T) {
+		oversized := make([]byte, 2*1024*1024+10)
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		part, err := writer.CreateFormFile("icon_file", "big.png")
+		require.NoError(t, err)
+		_, err = part.Write(oversized)
+		require.NoError(t, err)
+		require.NoError(t, writer.Close())
+
+		reader := multipart.NewReader(&body, writer.Boundary())
+		form, err := reader.ReadForm(3 * 1024 * 1024)
+		require.NoError(t, err)
+
+		files := form.File["icon_file"]
+		require.Len(t, files, 1)
+
+		_, err = ProcessUploadedIcon(files[0])
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "max 2MB")
 	})
 }
 

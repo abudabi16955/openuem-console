@@ -249,6 +249,56 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 					}
 				}
 			}
+
+			function previewUploadedIcon(input, previewId, errorId, invalidFormatMsg, tooLargeMsg) {
+				var errorEl = document.getElementById(errorId);
+				var previewEl = document.getElementById(previewId);
+				if (errorEl) {
+					errorEl.textContent = '';
+					errorEl.classList.add('hidden');
+				}
+				if (!input.files || input.files.length === 0) {
+					return;
+				}
+				var file = input.files[0];
+				var allowedExtensions = ['.png', '.jpg', '.jpeg', '.ico', '.svg', '.webp'];
+				var allowedMimes = ['image/png', 'image/jpeg', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml', 'image/webp'];
+
+				var name = file.name.toLowerCase();
+				var extValid = allowedExtensions.some(function(ext) { return name.endsWith(ext); });
+				var mimeValid = allowedMimes.indexOf(file.type) !== -1 || file.type === '';
+
+				if (!extValid && !mimeValid) {
+					if (errorEl) {
+						errorEl.textContent = invalidFormatMsg;
+						errorEl.classList.remove('hidden');
+					}
+					input.value = '';
+					return;
+				}
+
+				if (file.size > 2 * 1024 * 1024) {
+					if (errorEl) {
+						errorEl.textContent = tooLargeMsg;
+						errorEl.classList.remove('hidden');
+					}
+					input.value = '';
+					return;
+				}
+
+				var reader = new FileReader();
+				reader.onload = function(e) {
+					if (previewEl) {
+						previewEl.innerHTML = '';
+						var img = document.createElement('img');
+						img.src = e.target.result;
+						img.alt = 'Icon preview';
+						img.className = 'h-5 w-5 object-contain rounded';
+						previewEl.appendChild(img);
+					}
+				};
+				reader.readAsDataURL(file);
+			}
 		</script>
 	</main>
 }
@@ -338,8 +388,16 @@ templ NewPackageModal(commonInfo *partials.CommonInfo) {
 								</div>
 							</div>
 							<div class="mt-1">
-								<label class="text-[11px] text-muted-foreground block mb-0.5">{ i18n.T(ctx, "packages.upload_icon", i18n.Default("Or upload custom icon (PNG, ICO, SVG, max 2MB)")) }</label>
-								<input type="file" name="icon_file" accept=".png,.ico,.svg,.jpg,.jpeg,.webp" class="uk-input text-xs" />
+								<label class="text-[11px] text-muted-foreground block mb-0.5">{ i18n.T(ctx, "packages.upload_icon", i18n.Default("Or upload custom icon (PNG, JPG, ICO, SVG, WebP, max 2MB)")) }</label>
+								<input
+									type="file"
+									id="new-package-icon-file"
+									name="icon_file"
+									accept=".png,.ico,.svg,.jpg,.jpeg,.webp"
+									class="uk-input text-xs"
+									onchange={ templ.ComponentScript{Call: fmt.Sprintf("previewUploadedIcon(this, 'new-package-icon-preview', 'new-package-icon-error', '%s', '%s')", templ.EscapeString(i18n.T(ctx, "packages.icon_invalid_format", i18n.Default("Invalid file format. Allowed formats: PNG, JPG, ICO, SVG, WebP"))), templ.EscapeString(i18n.T(ctx, "packages.icon_too_large", i18n.Default("Icon file is too large (max 2MB)"))))} }
+								/>
+								<div id="new-package-icon-error" class="text-xs text-red-500 mt-1 hidden" role="alert" aria-live="polite"></div>
 							</div>
 						</div>
 					</div>
@@ -424,6 +482,7 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 		urlSecID := fmt.Sprintf("edit-url-section-%s", pkg.ID.String())
 		iconInputID := fmt.Sprintf("edit-package-icon-input-%s", pkg.ID.String())
 		iconPreviewID := fmt.Sprintf("edit-package-icon-preview-%s", pkg.ID.String())
+		iconErrorID := fmt.Sprintf("edit-package-icon-error-%s", pkg.ID.String())
 		errorID := fmt.Sprintf("edit-package-error-%s", pkg.ID.String())
 		saveBtnID := fmt.Sprintf("edit-package-save-btn-%s", pkg.ID.String())
 		spinnerID := fmt.Sprintf("edit-package-spinner-%s", pkg.ID.String())
@@ -503,8 +562,15 @@ templ EditPackageModal(pkg *ent.SelfServicePackage, commonInfo *partials.CommonI
 								</div>
 							</div>
 							<div class="mt-1">
-								<label class="text-[11px] text-muted-foreground block mb-0.5">{ i18n.T(ctx, "packages.upload_icon", i18n.Default("Or upload custom icon (PNG, ICO, SVG, max 2MB)")) }</label>
-								<input type="file" name="icon_file" accept=".png,.ico,.svg,.jpg,.jpeg,.webp" class="uk-input text-xs" />
+								<label class="text-[11px] text-muted-foreground block mb-0.5">{ i18n.T(ctx, "packages.upload_icon", i18n.Default("Or upload custom icon (PNG, JPG, ICO, SVG, WebP, max 2MB)")) }</label>
+								<input
+									type="file"
+									name="icon_file"
+									accept=".png,.ico,.svg,.jpg,.jpeg,.webp"
+									class="uk-input text-xs"
+									onchange={ templ.ComponentScript{Call: fmt.Sprintf("previewUploadedIcon(this, '%s', '%s', '%s', '%s')", iconPreviewID, iconErrorID, templ.EscapeString(i18n.T(ctx, "packages.icon_invalid_format", i18n.Default("Invalid file format. Allowed formats: PNG, JPG, ICO, SVG, WebP"))), templ.EscapeString(i18n.T(ctx, "packages.icon_too_large", i18n.Default("Icon file is too large (max 2MB)"))))} }
+								/>
+								<div id={ iconErrorID } class="text-xs text-red-500 mt-1 hidden" role="alert" aria-live="polite"></div>
 							</div>
 						</div>
 					</div>
