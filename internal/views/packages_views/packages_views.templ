@@ -24,8 +24,14 @@ var standardIcons = []string{
 }
 
 func getPackagePlatform(pkg *ent.SelfServicePackage) string {
+	if pkg.PackageType == selfservicepackage.PackageTypeMsi ||
+		pkg.PackageType == selfservicepackage.PackageTypeExe ||
+		pkg.PackageType == selfservicepackage.PackageTypeWinget {
+		return "Windows"
+	}
+
 	lower := strings.ToLower(pkg.Name + " " + pkg.Description + " " + pkg.Category)
-	if strings.Contains(lower, "macos") || strings.Contains(lower, "darwin") || strings.Contains(lower, "mac") {
+	if strings.Contains(lower, "macos") || strings.Contains(lower, "darwin") || strings.Contains(lower, "osx") || strings.Contains(lower, "mac os") {
 		return "macOS"
 	}
 	if strings.Contains(lower, "linux") || strings.Contains(lower, "ubuntu") || strings.Contains(lower, "debian") {
@@ -37,14 +43,12 @@ func getPackagePlatform(pkg *ent.SelfServicePackage) string {
 templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServicePackageFilter, pkgs []*ent.SelfServicePackage, itemsPerPage int, commonInfo *partials.CommonInfo) {
 	@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Software", i18n.Default("Software")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}, {Title: i18n.T(ctx, "software.tabs.packages", i18n.Default("Packages")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}}, commonInfo)
 	<main class="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+		<div id="error" class="hidden"></div>
+		<div id="success" class="hidden"></div>
 		<div class="uk-width-1-2@m uk-card uk-card-default">
-			<div class="uk-card-body uk-flex uk-flex-column gap-4">
+			<div class="uk-card-header">
 				@software_views.SoftwareNavbar("packages", commonInfo)
-				<div id="error" class="hidden"></div>
-				<div id="success" class="hidden"></div>
-				<div class="uk-width-1-2@m uk-card uk-card-default">
-					<div class="uk-card-header">
-						<div class="flex justify-between items-center">
+				<div class="flex justify-between items-center mt-4">
 							<div class="flex flex-col">
 								<h3 class="uk-card-title">{ i18n.T(ctx, "packages.title", i18n.Default("Self-Service Packages")) }</h3>
 								<p class="uk-margin-small-top uk-text-small text-muted-foreground">
@@ -275,8 +279,6 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 								<p class="uk-text-small">{ i18n.T(ctx, "packages.no_packages", i18n.Default("No self-service packages configured yet")) }</p>
 							</div>
 						}
-					</div>
-				</div>
 			</div>
 		</div>
 		@NewPackageModal(commonInfo)
