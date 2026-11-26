@@ -8,21 +8,23 @@ import (
 	"github.com/open-uem/openuem-console/internal/views/filters"
 	"github.com/open-uem/openuem-console/internal/views/layout"
 	"github.com/open-uem/openuem-console/internal/views/partials"
+	"github.com/open-uem/openuem-console/internal/views/software_views"
 	"strconv"
 	"strings"
 )
 
 templ Deploy(c echo.Context, install bool, successMessage string, commonInfo *partials.CommonInfo) {
 	if install {
-		<title>OpenUEM | { i18n.T(ctx, "Deploy") } | { i18n.T(ctx, "Install") } </title>
-		@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Deploy"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy")))}, {Title: "Install", Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/install")))}}, commonInfo)
+		<title>OpenUEM | { i18n.T(ctx, "Software") } | { i18n.T(ctx, "Install") } </title>
+		@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Software", i18n.Default("Software")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}, {Title: i18n.T(ctx, "software.tabs.deploy", i18n.Default("Quick Deploy")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy")))}, {Title: i18n.T(ctx, "Install"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/install")))}}, commonInfo)
 	} else {
-		<title>OpenUEM | { i18n.T(ctx, "Deploy") } | { i18n.T(ctx, "Uninstall") } </title>
-		@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Deploy"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy")))}, {Title: "Uninstall", Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/uninstall")))}}, commonInfo)
+		<title>OpenUEM | { i18n.T(ctx, "Software") } | { i18n.T(ctx, "Uninstall") } </title>
+		@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Software", i18n.Default("Software")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}, {Title: i18n.T(ctx, "software.tabs.deploy", i18n.Default("Quick Deploy")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy")))}, {Title: i18n.T(ctx, "Uninstall"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/uninstall")))}}, commonInfo)
 	}
 	<main class="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
 		<div class="uk-width-1-2@m uk-card uk-card-default">
 			<div class="uk-card-body uk-flex uk-flex-column gap-4">
+				@software_views.SoftwareNavbar("deploy", commonInfo)
 				if install {
 					@DeployNavbar("install", commonInfo)
 				} else {
@@ -82,9 +84,9 @@ templ Deploy(c echo.Context, install bool, successMessage string, commonInfo *pa
 									type="submit"
 									class="uk-button uk-button-primary"
 									if install {
-										hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/searchinstall"))) }
+										hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/searchinstall"))) }
 									} else {
-										hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/searchuninstall"))) }
+										hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/searchuninstall"))) }
 									}
 									hx-push-url="true"
 									hx-target="#deploy-search-results"
@@ -108,8 +110,8 @@ templ DeployNavbar(active string, commonInfo *partials.CommonInfo) {
 	<ul class="uk-tab">
 		<li class={ templ.KV("uk-active", active == "install") }>
 			<a
-				href={ templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/install")) }
-				hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/install"))) }
+				href={ templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/install")) }
+				hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/install"))) }
 				hx-push-url="true"
 				hx-target="#main"
 				hx-swap="outerHTML"
@@ -119,8 +121,8 @@ templ DeployNavbar(active string, commonInfo *partials.CommonInfo) {
 		</li>
 		<li class={ templ.KV("uk-active", active == "uninstall") }>
 			<a
-				href={ templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/uninstall")) }
-				hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/uninstall"))) }
+				href={ templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/uninstall")) }
+				hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/uninstall"))) }
 				hx-push-url="true"
 				hx-target="#main"
 				hx-swap="outerHTML"
@@ -132,7 +134,7 @@ templ DeployNavbar(active string, commonInfo *partials.CommonInfo) {
 }
 
 templ DeployIndex(title string, cmp templ.Component, commonInfo *partials.CommonInfo) {
-	@layout.Base("deploy", commonInfo) {
+	@layout.Base("software", commonInfo) {
 		@cmp
 	}
 }
@@ -175,7 +177,7 @@ templ SearchPacketResult(install bool, packages []*ent.SoftwarePackage, c echo.C
 						</td>
 						<td class="!align-middle">
 							<form
-								hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/selectpackagedeployment"))) }
+								hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/selectpackagedeployment"))) }
 								hx-push-url="true"
 								hx-target="#main"
 								hx-swap="outerHTML"
@@ -213,9 +215,9 @@ templ SearchPacketResult(install bool, packages []*ent.SoftwarePackage, c echo.C
 			</tbody>
 		</table>
 		if install {
-			@partials.Pagination(c, p, "post", "#deploy-search-results", "innerHTML", string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/searchinstall"))), itemsPerPage)
+			@partials.Pagination(c, p, "post", "#deploy-search-results", "innerHTML", string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/searchinstall"))), itemsPerPage)
 		} else {
-			@partials.Pagination(c, p, "post", "#deploy-search-results", "innerHTML", string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/searchuninstall"))), itemsPerPage)
+			@partials.Pagination(c, p, "post", "#deploy-search-results", "innerHTML", string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/searchuninstall"))), itemsPerPage)
 		}
 	} else {
 		<p class="uk-text-small uk-text-muted mt-8 mb-2">
@@ -226,15 +228,16 @@ templ SearchPacketResult(install bool, packages []*ent.SoftwarePackage, c echo.C
 
 templ SelectPackageDeployment(c echo.Context, p partials.PaginationAndSort, f filters.AgentFilter, packageId, packageName, packageSource, packageBranch, packageBrewType string, packageVerified bool, agents []*ent.Agent, install bool, refresh int, itemsPerPage int, commonInfo *partials.CommonInfo) {
 	if install {
-		<title>OpenUEM | { i18n.T(ctx, "Deploy") } | { i18n.T(ctx, "Install") } </title>
-		@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Deploy"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy")))}, {Title: "Install", Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/install")))}, {Title: packageName, Url: ""}}, commonInfo)
+		<title>OpenUEM | { i18n.T(ctx, "Software") } | { i18n.T(ctx, "Install") } </title>
+		@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Software", i18n.Default("Software")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}, {Title: i18n.T(ctx, "software.tabs.deploy", i18n.Default("Quick Deploy")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy")))}, {Title: i18n.T(ctx, "Install"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/install")))}, {Title: packageName, Url: ""}}, commonInfo)
 	} else {
-		<title>OpenUEM | { i18n.T(ctx, "Deploy") } | { i18n.T(ctx, "Uninstall") } </title>
-		@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Deploy"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy")))}, {Title: "Uninstall", Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/uninstall")))}, {Title: packageName, Url: ""}}, commonInfo)
+		<title>OpenUEM | { i18n.T(ctx, "Software") } | { i18n.T(ctx, "Uninstall") } </title>
+		@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Software", i18n.Default("Software")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}, {Title: i18n.T(ctx, "software.tabs.deploy", i18n.Default("Quick Deploy")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy")))}, {Title: i18n.T(ctx, "Uninstall"), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/uninstall")))}, {Title: packageName, Url: ""}}, commonInfo)
 	}
 	<main class="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
 		<div class="uk-width-1-2@m uk-card uk-card-default">
 			<div class="uk-card-body uk-flex uk-flex-column gap-4">
+				@software_views.SoftwareNavbar("deploy", commonInfo)
 				if install {
 					@DeployNavbar("install", commonInfo)
 				} else {
@@ -260,10 +263,9 @@ templ SelectPackageDeployment(c echo.Context, p partials.PaginationAndSort, f fi
 							<span class="uk-text-bolder">{ packageName }</span>
 						</p>
 						<form
-							hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/selectpackagedeployment"))) }
+							hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/selectpackagedeployment"))) }
 							hx-target="#main"
 							hx-push-url="true"
-							hx-target="#main"
 							hx-swap="outerHTML"
 							htmx-indicator="#update-spinner"
 							_="on htmx:configRequest
@@ -306,7 +308,7 @@ templ SelectPackageDeployment(c echo.Context, p partials.PaginationAndSort, f fi
 					</div>
 					<div class="uk-card-body mt-8 mb-2">
 						<div class="flex items-center gap-4">
-							@filters.ClearFilters(string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/selectpackagedeployment"))), "#main", "outerHTML", func() bool {
+							@filters.ClearFilters(string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/selectpackagedeployment"))), "#main", "outerHTML", func() bool {
 								return f.Nickname == "" && len(f.Versions) == 0 && len(f.AgentOSVersions) == 0 && len(f.Tags) == 0
 							})
 							if len(agents) > 0 {
@@ -316,17 +318,17 @@ templ SelectPackageDeployment(c echo.Context, p partials.PaginationAndSort, f fi
 									type="button"
 									class="uk-button uk-button-default flex items-center gap-2"
 									_={ fmt.Sprintf(`on click 
-												repeat in <input[type='checkbox']/>
-													if it.checked is false then
-														it.click()
-													end
+											repeat in <input[type='checkbox']/>
+												if it.checked is false then
+													it.click()
 												end
-												set storedItems to %s as Array
-												set sessionStorage.selectedAgents to storedItems as JSONString
-												set #filterBySelectedItems.value to '%d'
-												set #items-selected.innerHTML to '%d'
-												remove @disabled from #deploy-package
-											end`, f.SelectedAllAgents, p.NItems, p.NItems) }
+											end
+											set storedItems to %s as Array
+											set sessionStorage.selectedAgents to storedItems as JSONString
+											set #filterBySelectedItems.value to '%d'
+											set #items-selected.innerHTML to '%d'
+											remove @disabled from #deploy-package
+										end`, f.SelectedAllAgents, p.NItems, p.NItems) }
 								>
 									{ i18n.T(ctx, "SelectAll") }
 								</button>
@@ -336,17 +338,17 @@ templ SelectPackageDeployment(c echo.Context, p partials.PaginationAndSort, f fi
 									type="button"
 									class="uk-button uk-button-default flex items-center gap-2"
 									_="on click 
-												repeat in <input[type='checkbox']/>
-													if it.checked is true then
-														it.click()
-													end
+											repeat in <input[type='checkbox']/>
+												if it.checked is true then
+													it.click()
 												end
-												set storedItems to [] as Array
-												set sessionStorage.selectedAgents to storedItems as JSONString
-												set #filterBySelectedItems.value to '0'
-												set #items-selected.innerHTML to '0'
-												add @disabled to #deploy-package
-											end"
+											end
+											set storedItems to [] as Array
+											set sessionStorage.selectedAgents to storedItems as JSONString
+											set #filterBySelectedItems.value to '0'
+											set #items-selected.innerHTML to '0'
+											add @disabled to #deploy-package
+										end"
 								>
 									{ i18n.T(ctx, "DeselectAll") }
 								</button>
@@ -358,11 +360,11 @@ templ SelectPackageDeployment(c echo.Context, p partials.PaginationAndSort, f fi
 								<table
 									class="uk-table uk-table-divider uk-table-small uk-table-hover uk-table-striped  mt-4"
 									_="on load
-											if #filterBySelectedItems.value is '0' then
-												set storedItems to [] as Array
-												set sessionStorage.selectedAgents to storedItems as JSONString
-											end
-										end"
+										if #filterBySelectedItems.value is '0' then
+											set storedItems to [] as Array
+											set sessionStorage.selectedAgents to storedItems as JSONString
+										end
+									end"
 								>
 									<thead>
 										<tr>
@@ -414,7 +416,7 @@ templ SelectPackageDeployment(c echo.Context, p partials.PaginationAndSort, f fi
 															set storedItems to [] as Array
 															if sessionStorage.selectedAgents exists then														
 																set storedItems to sessionStorage.selectedAgents as Object
-															end																								
+															end																																	
 
 															set index to storedItems.indexOf(my name)		
 															if me.checked then
@@ -485,7 +487,7 @@ templ SelectPackageDeployment(c echo.Context, p partials.PaginationAndSort, f fi
 									}
 								</table>
 							</div>
-							@partials.Pagination(c, p, "get", "#main", "outerHTML", string(templ.URL(partials.GetNavigationUrl(commonInfo, "/deploy/selectpackagedeployment"))), itemsPerPage)
+							@partials.Pagination(c, p, "get", "#main", "outerHTML", string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/deploy/selectpackagedeployment"))), itemsPerPage)
 						} else {
 							<p class="uk-text-small uk-text-muted mt-4">
 								{ i18n.T(ctx, "agents.no_agents") }

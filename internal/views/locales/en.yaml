@@ -1531,6 +1531,9 @@ en:
     title: "Items per page"
     showing: "Showing %{firstItem} - %{lastItem} of %{totalItems}"
   packages:
+    platform: "Platform"
+    all_types: "All Types"
+    create_deployment_profile: "Create Deployment Profile"
     title: "Self-Service Packages"
     description: "Manage software packages available for user self-service installation"
     field_description: "Description"
@@ -1566,6 +1569,11 @@ en:
     source_not_found: "Could not find the associated package manager"
     wrong_brew_type: "Wrong brew type"
     invalid_verified: "Verified is not valid"
+  software:
+    tabs:
+      packages: "Packages"
+      inventory: "Detected Software"
+      deploy: "Quick Deploy"
   tenants:
     title: "Organizations"
     description: "OpenUEM supports multi-tenancy so you can manage different organizations. An organization can have one or more sites where endpoints are grouped. A default organization is created with a default site where endpoints are added if no organization and/or site is configured for the agent"

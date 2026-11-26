@@ -1525,6 +1525,9 @@ ca:
     title: "Elements per pàgina"
     showing: "Mostrant %{firstItem} - %{lastItem} de %{totalItems}"
   packages:
+    platform: "Plataforma"
+    all_types: "Tots els tipus"
+    create_deployment_profile: "Crea un perfil de desplegament"
     title: "Paquets d'autoservei"
     description: "Gestioneu els paquets de programari disponibles per a la instal·lació d'autoservei pels usuaris"
     field_description: "Descripció"
@@ -1560,6 +1563,11 @@ ca:
     source_not_found: "No s'ha pogut trobar el gestor de paquets associat"
     wrong_brew_type: "Tipus de brew incorrecte"
     invalid_verified: "Verificat no és vàlid"
+  software:
+    tabs:
+      packages: "Paquets"
+      inventory: "Programari detectat"
+      deploy: "Desplegament ràpid"
   tenants:
     title: "Organitzacions"
     description: "L'OpenUEM admet l'arrendament múltiple perquè pugueu gestionar diferents organitzacions. Una organització pot tenir un o més llocs on s'agrupin els punts finals. Es crea una organització predeterminada amb un lloc predeterminat on s'afegeixen punts finals si no hi ha cap organització i/o lloc configurat per a l'agent"

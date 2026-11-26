@@ -388,7 +388,7 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 
 		err := h.SavePackage(c)
 		assert.NoError(t, err)
-		assert.Contains(t, rec.Header().Get("HX-Redirect"), "/packages")
+		assert.Contains(t, rec.Header().Get("HX-Redirect"), "/software")
 
 		all, err := model.GetAllSelfServicePackages(t.Context())
 		require.NoError(t, err)
@@ -437,7 +437,7 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 
 		err = h.DeletePackage(c)
 		assert.NoError(t, err)
-		assert.Contains(t, rec.Header().Get("HX-Redirect"), "/packages")
+		assert.Contains(t, rec.Header().Get("HX-Redirect"), "/software")
 
 		remaining, err := model.GetAllSelfServicePackages(t.Context())
 		require.NoError(t, err)

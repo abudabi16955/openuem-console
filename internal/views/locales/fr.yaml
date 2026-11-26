@@ -1525,6 +1525,9 @@ fr:
     title: "Éléments par page"
     showing: "Affichage de %{firstItem} - %{lastItem} sur %{totalItems}"
   packages:
+    platform: "Plateforme"
+    all_types: "Tous les types"
+    create_deployment_profile: "Créer un profil de déploiement"
     title: "Paquets en libre-service"
     description: "Gérez les paquets logiciels disponibles pour l'installation en libre-service par les utilisateurs"
     field_description: "Description"
@@ -1560,6 +1563,11 @@ fr:
     source_not_found: "Impossible de trouver le gestionnaire de paquets associé"
     wrong_brew_type: "Type de brew incorrect"
     invalid_verified: "Vérifié n'est pas valide"
+  software:
+    tabs:
+      packages: "Paquets"
+      inventory: "Logiciels détectés"
+      deploy: "Déploiement rapide"
   tenants:
     title: "Organisations"
     description: "OpenUEM prend en charge le multi-tenancy afin que vous puissiez gérer différentes organisations. Une organisation peut avoir un ou plusieurs sites où les points de terminaison sont regroupés. Une organisation par défaut est créée avec un site par défaut où les points de terminaison sont ajoutés si aucune organisation et/ou site n'est configuré pour l'agent"

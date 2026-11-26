@@ -36,17 +36,17 @@ func (h *Handler) Software(c echo.Context) error {
 	// Get filters
 	f, err := h.GetSoftwareFilters(c)
 	if err != nil {
-		return RenderView(c, software_views.SoftwareIndex(" | Software", partials.Error(c, err.Error(), "Software", partials.GetNavigationUrl(commonInfo, "/software"), commonInfo), commonInfo))
+		return RenderView(c, software_views.SoftwareIndex(" | Software", partials.Error(c, err.Error(), "Software", partials.GetNavigationUrl(commonInfo, "/software/inventory"), commonInfo), commonInfo))
 	}
 
 	apps, err = h.Model.GetAppsByPage(p, *f, commonInfo)
 	if err != nil {
-		return RenderView(c, software_views.SoftwareIndex(" | Software", partials.Error(c, err.Error(), "Software", partials.GetNavigationUrl(commonInfo, "/software"), commonInfo), commonInfo))
+		return RenderView(c, software_views.SoftwareIndex(" | Software", partials.Error(c, err.Error(), "Software", partials.GetNavigationUrl(commonInfo, "/software/inventory"), commonInfo), commonInfo))
 	}
 
 	p.NItems, err = h.Model.CountAllApps(*f, commonInfo)
 	if err != nil {
-		return RenderView(c, software_views.SoftwareIndex(" | Software", partials.Error(c, err.Error(), "Software", partials.GetNavigationUrl(commonInfo, "/software"), commonInfo), commonInfo))
+		return RenderView(c, software_views.SoftwareIndex(" | Software", partials.Error(c, err.Error(), "Software", partials.GetNavigationUrl(commonInfo, "/software/inventory"), commonInfo), commonInfo))
 	}
 
 	refreshTime, err := h.Model.GetDefaultRefreshTime()
@@ -63,7 +63,6 @@ func (h *Handler) GetSoftwareFilters(c echo.Context) (*filters.ApplicationsFilte
 	filterByName := c.FormValue("filterByAppName")
 	filterByPublisher := c.FormValue("filterByAppPublisher")
 	filterByVersion := c.FormValue("filterByAppVersion")
-	filterBySearch := c.FormValue("filterBySearch")
 
 	f := filters.ApplicationsFilter{}
 	if filterByName != "" {
@@ -75,10 +74,6 @@ func (h *Handler) GetSoftwareFilters(c echo.Context) (*filters.ApplicationsFilte
 
 	if filterByVersion != "" {
 		f.Version = filterByVersion
-	}
-
-	if filterBySearch != "" {
-		f.Search = filterBySearch
 	}
 
 	return &f, nil

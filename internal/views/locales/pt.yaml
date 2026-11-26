@@ -1525,6 +1525,9 @@ pt:
     title: "Itens por página"
     showing: "Mostrando %{firstItem} - %{lastItem} de %{totalItems}"
   packages:
+    platform: "Plataforma"
+    all_types: "Todos os tipos"
+    create_deployment_profile: "Criar perfil de implantação"
     title: "Pacotes de autoatendimento"
     description: "Gerencie pacotes de software disponíveis para instalação de autoatendimento pelos usuários"
     field_description: "Descrição"
@@ -1556,6 +1559,11 @@ pt:
     silent_args: "Argumentos silenciosos"
     checksum: "Checksum SHA-256"
     no_packages: "Nenhum pacote de autoatendimento configurado ainda"
+  software:
+    tabs:
+      packages: "Pacotes"
+      inventory: "Software detetado"
+      deploy: "Implantação rápida"
   tenants:
     title: "Organizações"
     description: "O OpenUEM suporta multi-tenancy, permitindo gerenciar diferentes organizações. Uma organização pode ter um ou mais sites onde os endpoints são agrupados. Uma organização padrão é criada com um site padrão onde os endpoints são adicionados se nenhuma organização e/ou site estiver configurado para o agente"
