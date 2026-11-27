@@ -1525,6 +1525,9 @@ de:
     title: "Einträge pro Seite"
     showing: "Zeige %{firstItem} - %{lastItem} von %{totalItems}"
   packages:
+    platform: "Plattform"
+    all_types: "Alle Typen"
+    create_deployment_profile: "Bereitstellungsprofil erstellen"
     title: "Self-Service-Pakete"
     description: "Verwalten Sie Softwarepakete, die Benutzern zur Selbstinstallation zur Verfügung stehen"
     field_description: "Beschreibung"
@@ -1560,6 +1563,11 @@ de:
     source_not_found: "Zugehöriger Paketmanager konnte nicht gefunden werden"
     wrong_brew_type: "Falscher Brew-Typ"
     invalid_verified: "Verifiziert ist ungültig"
+  software:
+    tabs:
+      packages: "Paketkatalog"
+      inventory: "Inventar"
+      deploy: "Bereitstellungen"
   tenants:
     title: "Organisationen"
     description: "OpenUEM unterstützt Multi-Tenancy, sodass Sie verschiedene Organisationen verwalten können. Eine Organisation kann eine oder mehrere Standorte haben, in denen Endgeräte gruppiert sind. Eine Standard-Organisation wird mit einem Standard-Standort erstellt, wo Endgeräte hinzugefügt werden, wenn keine Organisation und/oder Standort für den Agent konfiguriert ist"

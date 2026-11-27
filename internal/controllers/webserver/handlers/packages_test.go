@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -13,26 +14,24 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"os"
 	"path/filepath"
-	"context"
+	"strings"
 	"testing"
-	"github.com/invopop/ctxi18n"
-	"github.com/open-uem/openuem-console/internal/views/locales"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/invopop/ctxi18n"
 	"github.com/labstack/echo/v4"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/open-uem/ent/enttest"
 	"github.com/open-uem/ent/selfservicepackage"
 	"github.com/open-uem/openuem-console/internal/icons"
 	"github.com/open-uem/openuem-console/internal/models"
+	"github.com/open-uem/openuem-console/internal/views/locales"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
 
 func initLocalesForTest(t *testing.T) context.Context {
 	t.Helper()
@@ -374,11 +373,11 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 		form := url.Values{
 			"name":              {"Google Chrome"},
 			"package_type":      {"msi"},
-			"source_type":        {"https"},
-			"source_url":         {"https://example.com/app.msi"},
-			"execution_context":  {"system"},
-			"enabled":            {"true"},
-			"icon":               {"chrome"},
+			"source_type":       {"https"},
+			"source_url":        {"https://example.com/app.msi"},
+			"execution_context": {"system"},
+			"enabled":           {"true"},
+			"icon":              {"chrome"},
 		}
 		req := httptest.NewRequest(http.MethodPost, "/packages/new", strings.NewReader(form.Encode())).WithContext(initLocalesForTest(t))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
@@ -388,7 +387,7 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 
 		err := h.SavePackage(c)
 		assert.NoError(t, err)
-		assert.Contains(t, rec.Header().Get("HX-Redirect"), "/packages")
+		assert.Equal(t, "/tenant/1/software/packages", rec.Header().Get("HX-Redirect"))
 
 		all, err := model.GetAllSelfServicePackages(t.Context())
 		require.NoError(t, err)
@@ -397,6 +396,32 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 		assert.True(t, strings.HasPrefix(all[0].Icon, "data:image/svg+xml;base64,"))
 	})
 
+	t.Run("update package", func(t *testing.T) {
+		all, err := model.GetAllSelfServicePackages(t.Context())
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		pkg := all[0]
+
+		form := url.Values{
+			"name":              {"Google Chrome Updated"},
+			"package_type":      {"msi"},
+			"source_type":       {"https"},
+			"source_url":        {"https://example.com/app.msi"},
+			"execution_context": {"system"},
+			"enabled":           {"true"},
+		}
+		req := httptest.NewRequest(http.MethodPost, "/packages/edit/"+pkg.ID.String(), strings.NewReader(form.Encode())).WithContext(initLocalesForTest(t))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetParamNames("id")
+		c.SetParamValues(pkg.ID.String())
+		c.Set("csrf", "test-csrf")
+
+		err = h.UpdatePackage(c)
+		assert.NoError(t, err)
+		assert.Equal(t, "/tenant/1/software/packages", rec.Header().Get("HX-Redirect"))
+	})
 
 	t.Run("update package validation error and retarget", func(t *testing.T) {
 		all, err := model.GetAllSelfServicePackages(t.Context())
@@ -437,7 +462,7 @@ func TestPackages_SaveUploadAndValidation(t *testing.T) {
 
 		err = h.DeletePackage(c)
 		assert.NoError(t, err)
-		assert.Contains(t, rec.Header().Get("HX-Redirect"), "/packages")
+		assert.Equal(t, "/tenant/1/software/packages", rec.Header().Get("HX-Redirect"))
 
 		remaining, err := model.GetAllSelfServicePackages(t.Context())
 		require.NoError(t, err)

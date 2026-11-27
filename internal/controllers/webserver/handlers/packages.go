@@ -174,7 +174,7 @@ func (h *Handler) Packages(c echo.Context) error {
 		}
 	}
 
-	return RenderView(c, packages_views.PackagesIndex(" | Packages", packages_views.Packages(c, p, f, pkgs, itemsPerPage, commonInfo), commonInfo))
+	return RenderView(c, packages_views.PackagesIndex(" | Software", packages_views.Packages(c, p, f, pkgs, itemsPerPage, commonInfo), commonInfo))
 }
 
 func (h *Handler) renderPackageModalError(c echo.Context, target string, message string) error {
@@ -320,9 +320,9 @@ func (h *Handler) SavePackage(c echo.Context) error {
 
 	h.notifySelfServiceUpdate("create", createdPkg.ID.String())
 
-	redirectURL := "/packages"
+	redirectURL := "/software/packages"
 	if commonInfo, err := h.GetCommonInfo(c); err == nil && commonInfo != nil {
-		redirectURL = partials.GetNavigationUrl(commonInfo, "/packages")
+		redirectURL = partials.GetNavigationUrl(commonInfo, "/software/packages")
 	}
 	c.Response().Header().Set("HX-Redirect", redirectURL)
 	return c.String(http.StatusOK, "")
@@ -484,9 +484,9 @@ func (h *Handler) UpdatePackage(c echo.Context) error {
 
 	h.notifySelfServiceUpdate("update", pkgID.String())
 
-	redirectURL := "/packages"
+	redirectURL := "/software/packages"
 	if commonInfo, err := h.GetCommonInfo(c); err == nil && commonInfo != nil {
-		redirectURL = partials.GetNavigationUrl(commonInfo, "/packages")
+		redirectURL = partials.GetNavigationUrl(commonInfo, "/software/packages")
 	}
 	c.Response().Header().Set("HX-Redirect", redirectURL)
 	return c.String(http.StatusOK, "")
@@ -516,9 +516,9 @@ func (h *Handler) DeletePackage(c echo.Context) error {
 
 	h.notifySelfServiceUpdate("delete", pkgID.String())
 
-	redirectURL := "/packages"
+	redirectURL := "/software/packages"
 	if commonInfo, err := h.GetCommonInfo(c); err == nil && commonInfo != nil {
-		redirectURL = partials.GetNavigationUrl(commonInfo, "/packages")
+		redirectURL = partials.GetNavigationUrl(commonInfo, "/software/packages")
 	}
 	c.Response().Header().Set("HX-Redirect", redirectURL)
 	return c.String(http.StatusOK, "")

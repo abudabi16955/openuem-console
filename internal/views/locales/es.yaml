@@ -1525,6 +1525,9 @@ es:
     title: "Elem. por página"
     showing: "Mostrando %{firstItem} - %{lastItem} de %{totalItems}"
   packages:
+    platform: "Plataforma"
+    all_types: "Todos los tipos"
+    create_deployment_profile: "Crear perfil de despliegue"
     title: "Paquetes de autoservicio"
     description: "Administre los paquetes de software disponibles para la instalación de autoservicio por los usuarios"
     field_description: "Descripción"
@@ -1560,6 +1563,11 @@ es:
     source_not_found: "No se ha podido encontrar el gestor de paquetes asociado"
     wrong_brew_type: "Tipo de brew incorrecto"
     invalid_verified: "Verificado no es válido"
+  software:
+    tabs:
+      packages: "Catálogo de paquetes"
+      inventory: "Inventario"
+      deploy: "Despliegues"
   tenants:
     title: "Organizaciones"
     description: "OpenUEM permite gestionar diferentes organizaciones. Una organización puede tener uno o más sitios en los que se agrupan los equipos. Una organización por defecto con un sitio por defecto es creada donde se agregan los equipos si no se configura ninguna organización y/o sitio en el agente"

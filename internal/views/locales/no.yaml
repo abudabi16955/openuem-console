@@ -1525,6 +1525,9 @@ no:
     title: "Elementer per side"
     showing: "Viser %{firstItem} - %{lastItem} av %{totalItems}"
   packages:
+    platform: "Plattform"
+    all_types: "Alle typer"
+    create_deployment_profile: "Opprett distribusjonsprofil"
     title: "Selvbetjeningspakker"
     description: "Administrer programvarepakker tilgjengelig for brukernes selvbetjente installasjon"
     field_description: "Beskrivelse"
@@ -1556,6 +1559,11 @@ no:
     silent_args: "Stille argumenter"
     checksum: "SHA-256 Sjekksum"
     no_packages: "Ingen selvbetjeningspakker konfigurert ennå"
+  software:
+    tabs:
+      packages: "Pakkekatalog"
+      inventory: "Inventar"
+      deploy: "Distribusjoner"
   tenants:
     title: "Organisasjoner"
     description: "OpenUEM støtter flerbrukertilgang slik at du kan administrere forskjellige organisasjoner. En organisasjon kan ha én eller flere lokasjoner der endepunkter er gruppert. En standardorganisasjon opprettes med en standard lokasjon der endepunkter legges til hvis ingen organisasjon og/eller lokasjon er konfigurert for agenten"

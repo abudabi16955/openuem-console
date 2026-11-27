@@ -42,10 +42,10 @@ templ NavBar(active string, commonInfo *CommonInfo) {
 				hx-push-url="true"
 				hx-target="body"
 				uk-tooltip={ fmt.Sprintf("title: %s; pos: right", i18n.T(ctx, "Software")) }
-				class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8", templ.KV("bg-primary text-primary-foreground", active == "software"), templ.KV("text-muted-foreground hover:text-foreground", active != "software") }
+				class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8", templ.KV("bg-primary text-primary-foreground", active == "software" || active == "packages" || active == "deploy" || active == "inventory"), templ.KV("text-muted-foreground hover:text-foreground", active != "software" && active != "packages" && active != "deploy" && active != "inventory") }
 			>
 				<uk-icon hx-history="false" icon="app-window" custom-class="h-5 w-5" uk-cloack></uk-icon>
-				<span class="sr-only">Software</span>
+				<span class="sr-only">{ i18n.T(ctx, "Software") }</span>
 			</a>
 			<a
 				href={ templ.URL(GetNavigationUrl(commonInfo, "/security")) }
@@ -57,28 +57,6 @@ templ NavBar(active string, commonInfo *CommonInfo) {
 			>
 				<uk-icon hx-history="false" icon="shield" custom-class="h-5 w-5" uk-cloack></uk-icon>
 				<span class="sr-only">{ i18n.T(ctx, "Security") }</span>
-			</a>
-			<a
-				href={ templ.URL(GetNavigationUrl(commonInfo, "/deploy")) }
-				hx-get={ string(templ.URL(GetNavigationUrl(commonInfo, "/deploy"))) }
-				hx-push-url="true"
-				hx-target="body"
-				uk-tooltip={ fmt.Sprintf("title: %s; pos: right", i18n.T(ctx, "Deploy")) }
-				class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8", templ.KV("bg-primary text-primary-foreground", active == "deploy"), templ.KV("text-muted-foreground hover:text-foreground", active != "deploy") }
-			>
-				<uk-icon hx-history="false" icon="package" custom-class="h-5 w-5" uk-cloack></uk-icon>
-				<span class="sr-only">{ i18n.T(ctx, "Deploy") }</span>
-			</a>
-			<a
-				href={ templ.URL(GetNavigationUrl(commonInfo, "/packages")) }
-				hx-get={ string(templ.URL(GetNavigationUrl(commonInfo, "/packages"))) }
-				hx-push-url="true"
-				hx-target="body"
-				uk-tooltip={ fmt.Sprintf("title: %s; pos: right", i18n.T(ctx, "Self-Service", i18n.Default("Self-Service"))) }
-				class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8", templ.KV("bg-primary text-primary-foreground", active == "packages"), templ.KV("text-muted-foreground hover:text-foreground", active != "packages") }
-			>
-				<uk-icon hx-history="false" icon="boxes" custom-class="h-5 w-5" uk-cloack></uk-icon>
-				<span class="sr-only">{ i18n.T(ctx, "Self-Service", i18n.Default("Self-Service")) }</span>
 			</a>
 			<a
 				href={ templ.URL(GetNavigationUrl(commonInfo, "/profiles")) }

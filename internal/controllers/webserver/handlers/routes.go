@@ -410,7 +410,7 @@ func (h *Handler) Register(e *echo.Echo, registerRateLimit float64) {
 
 	e.GET("/network-printers", h.NetworkPrinters, h.IsAuthenticated)
 
-	e.POST("/packages", h.SearchWingetPackages, h.IsAuthenticated)
+	e.POST("/api/v1/search/winget", h.SearchWingetPackages, h.IsAuthenticated)
 	e.POST("/flatpak", h.SearchFlatpakPackages, h.IsAuthenticated)
 	e.POST("/brew-formulae", h.SearchHomeBrewFormulaePackages, h.IsAuthenticated)
 	e.POST("/brew-casks", h.SearchHomeBrewCasksPackages, h.IsAuthenticated)
@@ -533,14 +533,71 @@ func (h *Handler) Register(e *echo.Echo, registerRateLimit float64) {
 	e.GET("/tenant/:tenant/site/:site/security/updates", h.ListSecurityUpdatesStatus, h.IsAuthenticated)
 	e.POST("/tenant/:tenant/site/:site/security/updates", h.ListSecurityUpdatesStatus, h.IsAuthenticated)
 
+	// Software Hub - Inventory (Default Tab)
 	e.GET("/software", h.Software, h.IsAuthenticated)
 	e.POST("/software", h.Software, h.IsAuthenticated)
+	e.GET("/software/inventory", h.Software, h.IsAuthenticated)
+	e.POST("/software/inventory", h.Software, h.IsAuthenticated)
 
 	e.GET("/tenant/:tenant/software", h.Software, h.IsAuthenticated)
 	e.POST("/tenant/:tenant/software", h.Software, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/software/inventory", h.Software, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/software/inventory", h.Software, h.IsAuthenticated)
 
 	e.GET("/tenant/:tenant/site/:site/software", h.Software, h.IsAuthenticated)
 	e.POST("/tenant/:tenant/site/:site/software", h.Software, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/site/:site/software/inventory", h.Software, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/software/inventory", h.Software, h.IsAuthenticated)
+
+	// Software Hub - Packages
+	e.GET("/software/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/software/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/software/packages/new", h.SavePackage, h.IsAuthenticated)
+	e.POST("/software/packages/edit/:id", h.UpdatePackage, h.IsAuthenticated)
+	e.DELETE("/software/packages/:id", h.DeletePackage, h.IsAuthenticated)
+
+	e.GET("/tenant/:tenant/software/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/software/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/software/packages/new", h.SavePackage, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/software/packages/edit/:id", h.UpdatePackage, h.IsAuthenticated)
+	e.DELETE("/tenant/:tenant/software/packages/:id", h.DeletePackage, h.IsAuthenticated)
+
+	e.GET("/tenant/:tenant/site/:site/software/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/software/packages", h.Packages, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/software/packages/new", h.SavePackage, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/software/packages/edit/:id", h.UpdatePackage, h.IsAuthenticated)
+	e.DELETE("/tenant/:tenant/site/:site/software/packages/:id", h.DeletePackage, h.IsAuthenticated)
+
+	// Software Hub - Quick Deploy
+	e.GET("/software/deploy", h.DeployInstall, h.IsAuthenticated)
+	e.GET("/software/deploy/install", h.DeployInstall, h.IsAuthenticated)
+	e.GET("/software/deploy/uninstall", h.DeployUninstall, h.IsAuthenticated)
+	e.GET("/software/deploy/searchinstall", h.DeployInstall, h.IsAuthenticated)
+	e.POST("/software/deploy/searchinstall", func(c echo.Context) error { return h.SearchPackagesAction(c, true) }, h.IsAuthenticated)
+	e.GET("/software/deploy/searchuninstall", h.DeployUninstall, h.IsAuthenticated)
+	e.POST("/software/deploy/searchuninstall", func(c echo.Context) error { return h.SearchPackagesAction(c, false) }, h.IsAuthenticated)
+	e.GET("/software/deploy/selectpackagedeployment", h.SelectPackageDeployment, h.IsAuthenticated)
+	e.POST("/software/deploy/selectpackagedeployment", h.DeployPackageToSelectedAgents, h.IsAuthenticated)
+
+	e.GET("/tenant/:tenant/software/deploy", h.DeployInstall, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/software/deploy/install", h.DeployInstall, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/software/deploy/uninstall", h.DeployUninstall, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/software/deploy/searchinstall", h.DeployInstall, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/software/deploy/searchinstall", func(c echo.Context) error { return h.SearchPackagesAction(c, true) }, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/software/deploy/searchuninstall", h.DeployUninstall, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/software/deploy/searchuninstall", func(c echo.Context) error { return h.SearchPackagesAction(c, false) }, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/software/deploy/selectpackagedeployment", h.SelectPackageDeployment, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/software/deploy/selectpackagedeployment", h.DeployPackageToSelectedAgents, h.IsAuthenticated)
+
+	e.GET("/tenant/:tenant/site/:site/software/deploy", h.DeployInstall, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/site/:site/software/deploy/install", h.DeployInstall, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/site/:site/software/deploy/uninstall", h.DeployUninstall, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/site/:site/software/deploy/searchinstall", h.DeployInstall, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/software/deploy/searchinstall", func(c echo.Context) error { return h.SearchPackagesAction(c, true) }, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/site/:site/software/deploy/searchuninstall", h.DeployUninstall, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/software/deploy/searchuninstall", func(c echo.Context) error { return h.SearchPackagesAction(c, false) }, h.IsAuthenticated)
+	e.GET("/tenant/:tenant/site/:site/software/deploy/selectpackagedeployment", h.SelectPackageDeployment, h.IsAuthenticated)
+	e.POST("/tenant/:tenant/site/:site/software/deploy/selectpackagedeployment", h.DeployPackageToSelectedAgents, h.IsAuthenticated)
 
 	// Self-Service Packages
 	e.GET("/packages", h.Packages, h.IsAuthenticated)
