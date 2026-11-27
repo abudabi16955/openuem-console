@@ -22,7 +22,7 @@ templ WingetPackageSearch(t *ent.Task) {
 				placeholder={ i18n.T(ctx, "tasks.edit.introduce_package_name") }
 				spellcheck="false"
 				aria-label={ i18n.T(ctx, "tasks.edit.introduce_package_name") }
-				hx-post="/packages"
+				hx-post="/api/v1/search/winget"
 				hx-trigger="keyup[target.value.length > 2]"
 				hx-target="#select-package-dropdown"
 				hx-swap="outerHTML"

@@ -1565,9 +1565,9 @@ de:
     invalid_verified: "Verifiziert ist ungültig"
   software:
     tabs:
-      packages: "Pakete"
-      inventory: "Erkannte Software"
-      deploy: "Schnellbereitstellung"
+      packages: "Paketkatalog"
+      inventory: "Inventar"
+      deploy: "Bereitstellungen"
   tenants:
     title: "Organisationen"
     description: "OpenUEM unterstützt Multi-Tenancy, sodass Sie verschiedene Organisationen verwalten können. Eine Organisation kann eine oder mehrere Standorte haben, in denen Endgeräte gruppiert sind. Eine Standard-Organisation wird mit einem Standard-Standort erstellt, wo Endgeräte hinzugefügt werden, wenn keine Organisation und/oder Standort für den Agent konfiguriert ist"

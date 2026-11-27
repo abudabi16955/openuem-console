@@ -7,7 +7,7 @@ import (
 
 templ SoftwareNavbar(active string, commonInfo *partials.CommonInfo) {
 	<ul class="uk-tab">
-		<li class={ templ.KV("uk-active", active == "packages" || active == "software_packages") }>
+		<li class={ templ.KV("uk-active", active == "inventory" || active == "software_inventory" || active == "software") }>
 			<a
 				href={ templ.URL(partials.GetNavigationUrl(commonInfo, "/software")) }
 				hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software"))) }
@@ -15,18 +15,18 @@ templ SoftwareNavbar(active string, commonInfo *partials.CommonInfo) {
 				hx-target="#main"
 				hx-swap="outerHTML"
 			>
-				{ i18n.T(ctx, "software.tabs.packages", i18n.Default("Packages")) }
+				{ i18n.T(ctx, "software.tabs.inventory", i18n.Default("Inventory")) }
 			</a>
 		</li>
-		<li class={ templ.KV("uk-active", active == "inventory" || active == "software_inventory") }>
+		<li class={ templ.KV("uk-active", active == "packages" || active == "software_packages") }>
 			<a
-				href={ templ.URL(partials.GetNavigationUrl(commonInfo, "/software/inventory")) }
-				hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/inventory"))) }
+				href={ templ.URL(partials.GetNavigationUrl(commonInfo, "/software/packages")) }
+				hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/packages"))) }
 				hx-push-url="true"
 				hx-target="#main"
 				hx-swap="outerHTML"
 			>
-				{ i18n.T(ctx, "software.tabs.inventory", i18n.Default("Detected Software")) }
+				{ i18n.T(ctx, "software.tabs.packages", i18n.Default("Package Catalog")) }
 			</a>
 		</li>
 		<li class={ templ.KV("uk-active", active == "deploy" || active == "software_deploy") }>
@@ -37,7 +37,7 @@ templ SoftwareNavbar(active string, commonInfo *partials.CommonInfo) {
 				hx-target="#main"
 				hx-swap="outerHTML"
 			>
-				{ i18n.T(ctx, "software.tabs.deploy", i18n.Default("Quick Deploy")) }
+				{ i18n.T(ctx, "software.tabs.deploy", i18n.Default("Deployments")) }
 			</a>
 		</li>
 	</ul>

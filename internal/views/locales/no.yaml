@@ -1561,9 +1561,9 @@ no:
     no_packages: "Ingen selvbetjeningspakker konfigurert ennå"
   software:
     tabs:
-      packages: "Pakker"
-      inventory: "Oppdaget programvare"
-      deploy: "Hurtigdistribusjon"
+      packages: "Pakkekatalog"
+      inventory: "Inventar"
+      deploy: "Distribusjoner"
   tenants:
     title: "Organisasjoner"
     description: "OpenUEM støtter flerbrukertilgang slik at du kan administrere forskjellige organisasjoner. En organisasjon kan ha én eller flere lokasjoner der endepunkter er gruppert. En standardorganisasjon opprettes med en standard lokasjon der endepunkter legges til hvis ingen organisasjon og/eller lokasjon er konfigurert for agenten"

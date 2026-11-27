@@ -42,7 +42,7 @@ templ NavBar(active string, commonInfo *CommonInfo) {
 				hx-push-url="true"
 				hx-target="body"
 				uk-tooltip={ fmt.Sprintf("title: %s; pos: right", i18n.T(ctx, "Software")) }
-				class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8", templ.KV("bg-primary text-primary-foreground", active == "software" || active == "packages" || active == "deploy"), templ.KV("text-muted-foreground hover:text-foreground", active != "software" && active != "packages" && active != "deploy") }
+				class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8", templ.KV("bg-primary text-primary-foreground", active == "software" || active == "packages" || active == "deploy" || active == "inventory"), templ.KV("text-muted-foreground hover:text-foreground", active != "software" && active != "packages" && active != "deploy" && active != "inventory") }
 			>
 				<uk-icon hx-history="false" icon="app-window" custom-class="h-5 w-5" uk-cloack></uk-icon>
 				<span class="sr-only">{ i18n.T(ctx, "Software") }</span>

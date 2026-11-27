@@ -1565,9 +1565,9 @@ ca:
     invalid_verified: "Verificat no és vàlid"
   software:
     tabs:
-      packages: "Paquets"
-      inventory: "Programari detectat"
-      deploy: "Desplegament ràpid"
+      packages: "Catàleg de paquets"
+      inventory: "Inventari"
+      deploy: "Desplegaments"
   tenants:
     title: "Organitzacions"
     description: "L'OpenUEM admet l'arrendament múltiple perquè pugueu gestionar diferents organitzacions. Una organització pot tenir un o més llocs on s'agrupin els punts finals. Es crea una organització predeterminada amb un lloc predeterminat on s'afegeixen punts finals si no hi ha cap organització i/o lloc configurat per a l'agent"

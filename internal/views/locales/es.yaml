@@ -1565,9 +1565,9 @@ es:
     invalid_verified: "Verificado no es válido"
   software:
     tabs:
-      packages: "Paquetes"
-      inventory: "Software detectado"
-      deploy: "Despliegue rápido"
+      packages: "Catálogo de paquetes"
+      inventory: "Inventario"
+      deploy: "Despliegues"
   tenants:
     title: "Organizaciones"
     description: "OpenUEM permite gestionar diferentes organizaciones. Una organización puede tener uno o más sitios en los que se agrupan los equipos. Una organización por defecto con un sitio por defecto es creada donde se agregan los equipos si no se configura ninguna organización y/o sitio en el agente"

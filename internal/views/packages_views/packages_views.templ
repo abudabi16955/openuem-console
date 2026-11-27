@@ -2,7 +2,6 @@ package packages_views
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 
 	"github.com/invopop/ctxi18n/i18n"
@@ -41,7 +40,7 @@ func getPackagePlatform(pkg *ent.SelfServicePackage) string {
 }
 
 templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServicePackageFilter, pkgs []*ent.SelfServicePackage, itemsPerPage int, commonInfo *partials.CommonInfo) {
-	@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Software", i18n.Default("Software")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}, {Title: i18n.T(ctx, "software.tabs.packages", i18n.Default("Packages")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}}, commonInfo)
+	@partials.Header(c, []partials.Breadcrumb{{Title: i18n.T(ctx, "Software", i18n.Default("Software")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software")))}, {Title: i18n.T(ctx, "software.tabs.packages", i18n.Default("Packages")), Url: string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/packages")))}}, commonInfo)
 	<main class="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
 		<div id="error" class="hidden"></div>
 		<div id="success" class="hidden"></div>
@@ -72,7 +71,7 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 							<div class="flex gap-4 items-center">
 								<form
 									class="flex items-center gap-3"
-									hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software"))) }
+									hx-post={ string(templ.URL(partials.GetNavigationUrl(commonInfo, "/software/packages"))) }
 									hx-target="#main"
 									hx-swap="outerHTML"
 									hx-push-url="false"
@@ -227,17 +226,6 @@ templ Packages(c echo.Context, p partials.PaginationAndSort, f filters.SelfServi
 											</td>
 											<td class="!align-middle text-right">
 												<div class="flex items-center justify-end gap-2">
-													<a
-														href={ templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/profiles/new?description=%s", url.QueryEscape("Deploy " + pkg.Name)))) }
-														hx-get={ string(templ.URL(partials.GetNavigationUrl(commonInfo, fmt.Sprintf("/profiles/new?description=%s", url.QueryEscape("Deploy " + pkg.Name))))) }
-														hx-push-url="true"
-														hx-target="#main"
-														hx-swap="outerHTML"
-														title={ i18n.T(ctx, "packages.create_deployment_profile", i18n.Default("Create Deployment Profile")) }
-														class="uk-button uk-button-small uk-button-default"
-													>
-														<uk-icon hx-history="false" icon="replace-all" custom-class="h-3.5 w-3.5" uk-cloak></uk-icon>
-													</a>
 													if pkg.SourceType == selfservicepackage.SourceTypeUpload && pkg.FilePath != "" {
 														<a
 															href={ templ.URL(fmt.Sprintf("/api/v1/packages/download/%s", pkg.ID.String())) }
